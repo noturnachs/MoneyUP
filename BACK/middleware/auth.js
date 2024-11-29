@@ -27,7 +27,7 @@ const authMiddleware = async (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
       const [users] = await db.execute(
-        "SELECT user_id, email, first_name, last_name, username FROM users WHERE user_id = ?",
+        "SELECT user_id, email, first_name, last_name, username, account_status FROM users WHERE user_id = ? AND account_status = 'active'",
         [decoded.id]
       );
 

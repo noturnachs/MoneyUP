@@ -58,24 +58,42 @@ exports.login = async (req, res) => {
     if (!identifier || !password) {
       return res.status(400).json({
         success: false,
-        message: "Please provide all required fields",
+        message: identifier
+          ? "Password is required"
+          : "Email or username is required",
       });
     }
 
-    // Find user by email or username
+    // First check if user exists regardless of status
     const [users] = await db.execute(
-      "SELECT * FROM users WHERE email = ? OR username = ?",
+      "SELECT * FROM users WHERE (email = ? OR username = ?)",
       [identifier, identifier]
     );
 
     if (users.length === 0) {
       return res.status(401).json({
         success: false,
-        message: "Invalid credentials",
+        message: "No account found with this email/username",
       });
     }
 
     const user = users[0];
+
+    // Check if account is deleted
+    if (user.account_status === "deleted") {
+      return res.status(401).json({
+        success: false,
+        message: "Your account has been deleted as per your request",
+      });
+    }
+
+    // Check if account is active
+    if (user.account_status !== "active") {
+      return res.status(401).json({
+        success: false,
+        message: "Your account is not active",
+      });
+    }
 
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -83,7 +101,7 @@ exports.login = async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: "Invalid credentials",
+        message: "Incorrect password",
       });
     }
 
@@ -216,27 +234,23 @@ exports.updateProfile = async (req, res) => {
 };
 
 exports.deleteAccount = async (req, res) => {
+  const connection = await db.getConnection();
+
   try {
     const userId = req.user.id;
 
     // Begin transaction
-    await db.beginTransaction();
+    await connection.beginTransaction();
 
     try {
-      // Delete user's expenses
-      await db.execute("DELETE FROM expenses WHERE user_id = ?", [userId]);
-
-      // Delete user's income records
-      await db.execute("DELETE FROM income WHERE user_id = ?", [userId]);
-
-      // Delete user's categories
-      await db.execute("DELETE FROM categories WHERE user_id = ?", [userId]);
-
-      // Finally delete the user
-      await db.execute("DELETE FROM users WHERE user_id = ?", [userId]);
+      // Update user's account_status to 'deleted'
+      await connection.execute(
+        "UPDATE users SET account_status = 'deleted' WHERE user_id = ?",
+        [userId]
+      );
 
       // Commit transaction
-      await db.commit();
+      await connection.commit();
 
       res.json({
         success: true,
@@ -244,7 +258,7 @@ exports.deleteAccount = async (req, res) => {
       });
     } catch (error) {
       // Rollback in case of error
-      await db.rollback();
+      await connection.rollback();
       throw error;
     }
   } catch (error) {
@@ -253,6 +267,8 @@ exports.deleteAccount = async (req, res) => {
       success: false,
       message: "Error deleting account",
     });
+  } finally {
+    connection.release(); // Release the connection back to the pool
   }
 };
 
