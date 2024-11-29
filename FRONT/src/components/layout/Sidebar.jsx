@@ -57,11 +57,11 @@ const Sidebar = ({ isOpen }) => {
       className={`${isOpen ? "translate-x-0" : "-translate-x-full"} 
       fixed inset-y-0 left-0 transform transition-all duration-300 ease-in-out 
       ${isCollapsed ? "w-20" : "w-64"} bg-gray-800 border-r border-gray-700 
-      z-30 md:relative md:translate-x-0 h-[calc(100vh-64px)]`}
+      z-30 md:relative md:translate-x-0 h-[calc(100vh-64px)] relative`}
     >
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-10 bg-gray-800 text-gray-400 
+        className="absolute -right-3 top-1/2 -translate-y-1/2 bg-gray-800 text-gray-400 
         hover:text-white p-1 rounded-full border border-gray-700 
         hover:border-gray-600 focus:outline-none"
       >
