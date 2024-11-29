@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 
 const Income = () => {
+  const [isVisible, setIsVisible] = useState(false);
   const [showIncomeForm, setShowIncomeForm] = useState(false);
   const [incomeHistory, setIncomeHistory] = useState([]);
   const [newIncome, setNewIncome] = useState("");
@@ -10,8 +11,11 @@ const Income = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
 
   useEffect(() => {
-    fetchIncomeHistory();
-    fetchCategories();
+    const fetchData = async () => {
+      await Promise.all([fetchIncomeHistory(), fetchCategories()]);
+      setTimeout(() => setIsVisible(true), 100);
+    };
+    fetchData();
   }, []);
 
   const fetchIncomeHistory = async () => {
@@ -89,7 +93,11 @@ const Income = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div
+      className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-all duration-500 ease-in-out transform ${
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+      }`}
+    >
       <div className="space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">

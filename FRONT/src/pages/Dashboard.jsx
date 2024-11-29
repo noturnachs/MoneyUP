@@ -34,6 +34,7 @@ const Dashboard = () => {
     currentChange: 0,
     lastChangeDate: null,
   });
+  const [isVisible, setIsVisible] = useState(false);
 
   // Initial data check
   useEffect(() => {
@@ -137,8 +138,15 @@ const Dashboard = () => {
               lastChangeDate: latest.date,
             });
           }
+
+          // After all data is loaded, set visibility to true
+          setIsLoading(false);
+          // Small delay to ensure smooth transition
+          setTimeout(() => setIsVisible(true), 200);
         } catch (error) {
           console.error("Error fetching dashboard data:", error);
+          setIsLoading(false);
+          setIsVisible(true);
         }
       };
 
@@ -339,7 +347,11 @@ const Dashboard = () => {
 
   // Regular dashboard view when user has data
   return (
-    <div className="space-y-6">
+    <div
+      className={`space-y-6 transition-all duration-500 ease-in-out transform ${
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+      }`}
+    >
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">

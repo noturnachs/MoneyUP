@@ -6,9 +6,25 @@ import {
   ChartPieIcon,
   ArrowTrendingUpIcon,
 } from "@heroicons/react/24/outline";
+import { useState, useEffect } from "react";
 
 const Landing = () => {
   const { user, logout } = useAuth();
+  const [isVisible, setIsVisible] = useState({
+    hero: false,
+    features: false,
+    cta: false,
+  });
+
+  useEffect(() => {
+    // Stagger the animations
+    setIsVisible((prev) => ({ ...prev, hero: true }));
+    setTimeout(
+      () => setIsVisible((prev) => ({ ...prev, features: true })),
+      300
+    );
+    setTimeout(() => setIsVisible((prev) => ({ ...prev, cta: true })), 600);
+  }, []);
 
   const features = [
     {
@@ -85,7 +101,13 @@ const Landing = () => {
 
       {/* Hero Section */}
       <div className="relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        <div
+          className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 transition-all duration-700 ease-out transform ${
+            isVisible.hero
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 translate-y-8"
+          }`}
+        >
           <div className="text-center">
             <h1 className="text-4xl tracking-tight font-extrabold text-white sm:text-5xl md:text-6xl">
               <span className="block">Take Control of Your</span>
@@ -109,7 +131,13 @@ const Landing = () => {
 
       {/* Features Section */}
       <div className="bg-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div
+          className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 transition-all duration-700 ease-out transform ${
+            isVisible.features
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 translate-y-8"
+          }`}
+        >
           <div className="text-center">
             <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
               Everything you need to manage your money
@@ -122,8 +150,20 @@ const Landing = () => {
 
           <div className="mt-20">
             <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-              {features.map((feature) => (
-                <div key={feature.title} className="pt-6">
+              {features.map((feature, index) => (
+                <div
+                  key={feature.title}
+                  className={`pt-6 transition-all duration-700 ease-out transform delay-${
+                    index * 100
+                  }`}
+                  style={{
+                    transitionDelay: `${index * 100}ms`,
+                    opacity: isVisible.features ? 1 : 0,
+                    transform: isVisible.features
+                      ? "translateY(0)"
+                      : "translateY(20px)",
+                  }}
+                >
                   <div className="flow-root bg-gray-900 rounded-lg px-6 pb-8">
                     <div className="-mt-6">
                       <div>
@@ -151,7 +191,13 @@ const Landing = () => {
 
       {/* CTA Section */}
       <div className="bg-gray-900">
-        <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+        <div
+          className={`max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8 transition-all duration-700 ease-out transform ${
+            isVisible.cta
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 translate-y-8"
+          }`}
+        >
           <div className="bg-purple-600 rounded-lg shadow-xl overflow-hidden">
             <div className="px-6 py-12 sm:px-12 sm:py-16 lg:flex lg:items-center lg:justify-between">
               <div>

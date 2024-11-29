@@ -8,10 +8,14 @@ const Expenses = () => {
   const [expenseDescription, setExpenseDescription] = useState("");
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    fetchExpenses();
-    fetchCategories();
+    const fetchData = async () => {
+      await Promise.all([fetchExpenses(), fetchCategories()]);
+      setTimeout(() => setIsVisible(true), 100);
+    };
+    fetchData();
   }, []);
 
   const fetchCategories = async () => {
@@ -89,7 +93,11 @@ const Expenses = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div
+      className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-all duration-500 ease-in-out transform ${
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+      }`}
+    >
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold text-white">Expenses</h1>
@@ -175,39 +183,45 @@ const Expenses = () => {
 
         <div className="bg-gray-800 rounded-xl border border-gray-700">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left text-gray-400 text-sm">
-                  <th className="p-4">Amount</th>
-                  <th className="p-4">Description</th>
-                  <th className="p-4">Category</th>
-                  <th className="p-4">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-700">
-                {expenses.map((expense) => (
-                  <tr
-                    key={expense.id}
-                    className="text-gray-300 hover:bg-gray-700/50"
-                  >
-                    <td className="p-4">
-                      <span className="text-red-500">
-                        -₱
-                        {parseFloat(expense.amount).toLocaleString("en-US", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </span>
-                    </td>
-                    <td className="p-4">{expense.description}</td>
-                    <td className="p-4">{expense.category_name || "-"}</td>
-                    <td className="p-4">
-                      {new Date(expense.date).toLocaleDateString()}
-                    </td>
+            {expenses.length > 0 ? (
+              <table className="w-full">
+                <thead>
+                  <tr className="text-left text-gray-400 text-sm">
+                    <th className="p-4">Amount</th>
+                    <th className="p-4">Description</th>
+                    <th className="p-4">Category</th>
+                    <th className="p-4">Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-700">
+                  {expenses.map((expense) => (
+                    <tr
+                      key={expense.id}
+                      className="text-gray-300 hover:bg-gray-700/50"
+                    >
+                      <td className="p-4">
+                        <span className="text-red-500">
+                          -₱
+                          {parseFloat(expense.amount).toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      </td>
+                      <td className="p-4">{expense.description}</td>
+                      <td className="p-4">{expense.category_name || "-"}</td>
+                      <td className="p-4">
+                        {new Date(expense.date).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="flex items-center justify-center h-32">
+                <p className="text-gray-400 text-lg">No expenses found</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -26,6 +26,7 @@ const Analytics = () => {
   const [expensesByCategory, setExpensesByCategory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [incomeVsExpenses, setIncomeVsExpenses] = useState([]);
+  const [isVisible, setIsVisible] = useState(false);
 
   const COLORS = [
     "#8b5cf6", // purple-500
@@ -103,6 +104,7 @@ const Analytics = () => {
       console.error("Error fetching analytics data:", error);
     } finally {
       setIsLoading(false);
+      setTimeout(() => setIsVisible(true), 100);
     }
   };
 
@@ -136,7 +138,11 @@ const Analytics = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div
+      className={`space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-all duration-500 ease-in-out transform ${
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+      }`}
+    >
       {/* Header and Timeframe Selection */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-white">Financial Analytics</h1>
@@ -216,37 +222,43 @@ const Analytics = () => {
             Expenses by Category
           </h3>
           <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={expensesByCategory}
-                  dataKey="amount"
-                  nameKey="category"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={120}
-                  label={({ name, percent }) =>
-                    `${name} ${(percent * 100).toFixed(0)}%`
-                  }
-                  labelLine={true}
-                >
-                  {expensesByCategory.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value) => formatCurrency(value)}
-                  contentStyle={{
-                    backgroundColor: "#1F2937",
-                    border: "1px solid #374151",
-                    borderRadius: "0.5rem",
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            {expensesByCategory.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={expensesByCategory}
+                    dataKey="amount"
+                    nameKey="category"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={120}
+                    label={({ name, percent }) =>
+                      `${name} ${(percent * 100).toFixed(0)}%`
+                    }
+                    labelLine={true}
+                  >
+                    {expensesByCategory.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value) => formatCurrency(value)}
+                    contentStyle={{
+                      backgroundColor: "#1F2937",
+                      border: "1px solid #374151",
+                      borderRadius: "0.5rem",
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center">
+                <p className="text-gray-400 text-lg">No expenses found</p>
+              </div>
+            )}
           </div>
         </div>
 

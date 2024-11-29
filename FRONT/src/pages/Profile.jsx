@@ -5,6 +5,7 @@ const Profile = () => {
   const { user, logout, fetchUserData } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [formData, setFormData] = useState({
     firstName: "",
@@ -23,6 +24,7 @@ const Profile = () => {
         lastName: user.lastName || "",
         email: user.email || "",
       }));
+      setTimeout(() => setIsVisible(true), 100);
     }
   }, [user]);
 
@@ -135,7 +137,11 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div
+      className={`min-h-screen bg-gray-900 py-12 px-4 sm:px-6 lg:px-8 transition-all duration-500 ease-in-out transform ${
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+      }`}
+    >
       <div className="max-w-md mx-auto bg-gray-800 rounded-lg shadow-lg">
         <div className="px-6 py-4 border-b border-gray-700">
           <h2 className="text-xl font-semibold text-white">Profile Settings</h2>
