@@ -1,10 +1,18 @@
-import { useState, useEffect } from "react";
+import { lazy, useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { CheckCircleIcon } from "@heroicons/react/24/outline";
-import TransactionForm from "../components/transactions/TransactionForm";
-import TransactionList from "../components/transactions/TransactionList";
-import ExpenseChart from "../components/charts/ExpenseChart";
-import IncomeVsExpense from "../components/charts/IncomeVsExpense";
+
+// Lazy load components that aren't immediately needed
+const TransactionForm = lazy(() =>
+  import("../components/transactions/TransactionForm")
+);
+const TransactionList = lazy(() =>
+  import("../components/transactions/TransactionList")
+);
+const ExpenseChart = lazy(() => import("../components/charts/ExpenseChart"));
+const IncomeVsExpense = lazy(() =>
+  import("../components/charts/IncomeVsExpense")
+);
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -12,28 +20,22 @@ const Dashboard = () => {
   const [step, setStep] = useState(1);
   const [initialBalance, setInitialBalance] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [balanceData, setBalanceData] = useState({
     totalBalance: 0,
     currentBalance: 0,
     monthlyExpenses: 0,
     expenseChange: 0,
   });
-  const [newIncome, setNewIncome] = useState("");
-  const [incomeDescription, setIncomeDescription] = useState("");
-  const [incomeHistory, setIncomeHistory] = useState([]);
+  const [recentTransactions, setRecentTransactions] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [balanceChanges, setBalanceChanges] = useState({
     totalChange: 0,
     currentChange: 0,
     lastChangeDate: null,
-    balanceAfter: 0,
-    balanceBefore: 0,
   });
-  const [recentTransactions, setRecentTransactions] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState("");
 
-  // Check if user has any transactions
+  // Initial data check
   useEffect(() => {
     const checkUserData = async () => {
       try {
@@ -54,198 +56,122 @@ const Dashboard = () => {
     checkUserData();
   }, []);
 
-  // Move fetchBalanceData outside useEffect
-  const fetchBalanceData = async () => {
-    try {
-      // First, get total income
-      const incomeResponse = await fetch(
-        "http://localhost:5000/api/income/total",
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-      const incomeData = await incomeResponse.json();
-
-      // Then get total expenses
-      const expenseResponse = await fetch(
-        "http://localhost:5000/api/expenses/total",
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-      const expenseData = await expenseResponse.json();
-
-      // Calculate balances
-      const totalIncome = parseFloat(incomeData.total || 0);
-      const totalExpenses = parseFloat(expenseData.total || 0);
-      const currentBalance = totalIncome - totalExpenses;
-
-      setBalanceData({
-        totalBalance: totalIncome,
-        currentBalance: currentBalance,
-        monthlyExpenses: totalExpenses,
-        expenseChange: 0, // You can calculate this separately if needed
-      });
-    } catch (error) {
-      console.error("Error fetching balance:", error);
-    }
-  };
-
-  // Add function to fetch income history
-  const fetchIncomeHistory = async () => {
-    try {
-      const response = await fetch("http://localhost:5000/api/income", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setIncomeHistory(data.incomes || []);
-      }
-    } catch (error) {
-      console.error("Error fetching income history:", error);
-    }
-  };
-
-  // Update the fetchLastTransaction function
-  const fetchLastTransaction = async () => {
-    try {
-      // Fetch both income and expenses
-      const [incomeResponse, expenseResponse] = await Promise.all([
-        fetch("http://localhost:5000/api/income/recent", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }),
-        fetch("http://localhost:5000/api/expenses/recent", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }),
-      ]);
-
-      const incomeData = await incomeResponse.json();
-      const expenseData = await expenseResponse.json();
-
-      // Get the most recent transaction from both types
-      const allTransactions = [
-        ...(incomeData.incomes || []).map((income) => ({
-          ...income,
-          type: "income",
-          change: parseFloat(income.amount),
-        })),
-        ...(expenseData.expenses || []).map((expense) => ({
-          ...expense,
-          type: "expense",
-          change: -parseFloat(expense.amount),
-        })),
-      ];
-
-      // Sort by date and get the most recent
-      allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
-      const lastTransaction = allTransactions[0];
-
-      if (lastTransaction) {
-        setBalanceChanges({
-          totalChange:
-            lastTransaction.type === "income"
-              ? parseFloat(lastTransaction.amount)
-              : 0,
-          currentChange: lastTransaction.change,
-          lastChangeDate: lastTransaction.date,
-          balanceAfter: lastTransaction.balance_after || 0,
-          balanceBefore: lastTransaction.balance_before || 0,
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching last transaction:", error);
-    }
-  };
-
-  // Update the fetchRecentTransactions function
-  const fetchRecentTransactions = async () => {
-    try {
-      // Fetch both income and expenses
-      const [incomeResponse, expenseResponse] = await Promise.all([
-        fetch("http://localhost:5000/api/income/recent", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }),
-        fetch("http://localhost:5000/api/expenses/recent", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }),
-      ]);
-
-      const incomeData = await incomeResponse.json();
-      const expenseData = await expenseResponse.json();
-
-      // Combine and format transactions
-      const allTransactions = [
-        ...(incomeData.incomes || []).map((income) => ({
-          ...income,
-          type: "income",
-        })),
-        ...(expenseData.expenses || []).map((expense) => ({
-          ...expense,
-          type: "expense",
-        })),
-      ];
-
-      // Sort by date, most recent first
-      allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-      setRecentTransactions(allTransactions);
-    } catch (error) {
-      console.error("Error fetching recent transactions:", error);
-    }
-  };
-
-  // Add this new function to fetch categories
-  const fetchCategories = async () => {
-    try {
-      const response = await fetch(
-        "http://localhost:5000/api/categories/type/income",
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-      const data = await response.json();
-      if (response.ok) {
-        setCategories(data.categories || []);
-      }
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-    }
-  };
-
-  // Add a separate useEffect for fetching categories
-  useEffect(() => {
-    fetchCategories();
-  }, []); // This will run when component mounts
-
-  // Update useEffect to fetch both balance and income history
+  // Fetch dashboard data
   useEffect(() => {
     if (hasData) {
-      fetchBalanceData();
-      fetchIncomeHistory();
-      fetchLastTransaction();
-      fetchRecentTransactions();
+      const fetchDashboardData = async () => {
+        try {
+          // Fetch balance data and recent transactions in parallel
+          const [incomeResponse, expenseResponse] = await Promise.all([
+            fetch("http://localhost:5000/api/income/total", {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }),
+            fetch("http://localhost:5000/api/expenses/total", {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }),
+          ]);
+
+          const [incomeData, expenseData] = await Promise.all([
+            incomeResponse.json(),
+            expenseResponse.json(),
+          ]);
+
+          // Calculate total income and expenses
+          const totalIncome = parseFloat(incomeData.total || 0);
+          const totalExpenses = parseFloat(expenseData.total || 0);
+
+          // Set balance data with correct calculations
+          setBalanceData({
+            totalBalance: totalIncome, // Net total of all income
+            currentBalance: totalIncome - totalExpenses, // Income minus expenses
+            monthlyExpenses: totalExpenses,
+            expenseChange: 0, // Calculate if needed
+          });
+
+          // Fetch recent transactions
+          const [recentIncomeRes, recentExpenseRes] = await Promise.all([
+            fetch("http://localhost:5000/api/income/recent", {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }),
+            fetch("http://localhost:5000/api/expenses/recent", {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }),
+          ]);
+
+          const [recentIncome, recentExpense] = await Promise.all([
+            recentIncomeRes.json(),
+            recentExpenseRes.json(),
+          ]);
+
+          // Combine and sort transactions
+          const allTransactions = [
+            ...(recentIncome.incomes || []).map((income) => ({
+              ...income,
+              type: "income",
+              amount: parseFloat(income.amount),
+            })),
+            ...(recentExpense.expenses || []).map((expense) => ({
+              ...expense,
+              type: "expense",
+              amount: parseFloat(expense.amount),
+            })),
+          ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+          setRecentTransactions(allTransactions);
+
+          // Update balance changes based on most recent transaction
+          if (allTransactions.length > 0) {
+            const latest = allTransactions[0];
+            setBalanceChanges({
+              totalChange: latest.type === "income" ? latest.amount : 0,
+              currentChange:
+                latest.type === "income" ? latest.amount : -latest.amount,
+              lastChangeDate: latest.date,
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching dashboard data:", error);
+        }
+      };
+
+      fetchDashboardData();
+    }
+  }, [hasData]);
+
+  // Only fetch categories if needed for initial setup
+  useEffect(() => {
+    if (!hasData) {
+      const fetchCategories = async () => {
+        try {
+          const response = await fetch(
+            "http://localhost:5000/api/categories/type/income",
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }
+          );
+          const data = await response.json();
+          setCategories(data.categories || []);
+        } catch (error) {
+          console.error("Error fetching categories:", error);
+        }
+      };
+
+      fetchCategories();
     }
   }, [hasData]);
 
   const handleInitialSetup = async (e) => {
     e.preventDefault();
-
     if (!initialBalance || !selectedCategory) {
       alert("Please fill in all fields");
       return;
@@ -275,54 +201,6 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error("Error setting initial balance:", error);
-    }
-  };
-
-  const handleAddIncome = async (e) => {
-    e.preventDefault();
-
-    if (!newIncome || !incomeDescription || !selectedCategory) {
-      alert("Please fill in all fields");
-      return;
-    }
-
-    try {
-      const response = await fetch("http://localhost:5000/api/income", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
-          amount: parseFloat(newIncome),
-          description: incomeDescription,
-          category_id: selectedCategory,
-          date: new Date().toISOString(),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        await fetchBalanceData();
-        await fetchIncomeHistory();
-        setBalanceChanges({
-          totalChange: parseFloat(newIncome),
-          currentChange: parseFloat(newIncome),
-          lastChangeDate: new Date().toISOString(),
-        });
-
-        // Clear form including category
-        setNewIncome("");
-        setIncomeDescription("");
-        setSelectedCategory("");
-      } else {
-        console.error("Failed to add income:", data.message);
-        alert("Failed to add income. Please try again.");
-      }
-    } catch (error) {
-      console.error("Error adding income:", error);
-      alert("An error occurred. Please try again.");
     }
   };
 

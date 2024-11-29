@@ -144,7 +144,7 @@ const Profile = () => {
               onClick={() => setIsEditing(true)}
               className="mt-2 text-sm text-purple-400 hover:text-purple-300"
             >
-              Edit Profile
+              Edit Account Details
             </button>
           )}
         </div>
