@@ -6,12 +6,13 @@ class User {
     const hashedPassword = await bcrypt.hash(userData.password, 10);
 
     const query = `
-      INSERT INTO users (username, email, password)
+      INSERT INTO users 
+        (name, email, password)
       VALUES (?, ?, ?)
     `;
 
     const [result] = await db.execute(query, [
-      userData.username,
+      userData.name || `${userData.firstName} ${userData.lastName}`.trim(),
       userData.email,
       hashedPassword,
     ]);
@@ -20,8 +21,19 @@ class User {
   }
 
   static async findByEmail(email) {
-    const query = "SELECT * FROM users WHERE email = ?";
-    const [rows] = await db.execute(query, [email]);
+    if (!email) return null;
+
+    const [rows] = await db.execute("SELECT * FROM users WHERE email = ?", [
+      email,
+    ]);
+    return rows[0];
+  }
+
+  static async findById(id) {
+    const [rows] = await db.execute(
+      "SELECT user_id, name, email FROM users WHERE user_id = ?",
+      [id]
+    );
     return rows[0];
   }
 

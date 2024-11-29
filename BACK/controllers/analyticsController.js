@@ -2,105 +2,208 @@ const db = require("../config/database");
 
 exports.getSummary = async (req, res) => {
   try {
-    const { timeframe } = req.query;
+    const { timeframe, start_date, end_date } = req.query;
     const userId = req.user.id;
 
-    let dateFilter;
-    switch (timeframe) {
-      case "daily":
-        dateFilter = "DATE(date) = CURDATE()";
-        break;
-      case "weekly":
-        dateFilter = "YEARWEEK(date) = YEARWEEK(CURDATE())";
-        break;
-      case "monthly":
-        dateFilter =
-          "YEAR(date) = YEAR(CURDATE()) AND MONTH(date) = MONTH(CURDATE())";
-        break;
-      default:
-        dateFilter = "MONTH(date) = MONTH(CURDATE())";
+    let dateFilter = "";
+    let params = [userId, userId];
+
+    if (timeframe === "custom" && start_date && end_date) {
+      dateFilter = "AND date BETWEEN ? AND ?";
+      params = [userId, start_date, end_date, userId, start_date, end_date];
+    } else {
+      switch (timeframe) {
+        case "daily":
+          dateFilter = "AND DATE(date) = CURDATE()";
+          break;
+        case "weekly":
+          dateFilter = "AND YEARWEEK(date) = YEARWEEK(CURDATE())";
+          break;
+        case "monthly":
+          dateFilter =
+            "AND YEAR(date) = YEAR(CURDATE()) AND MONTH(date) = MONTH(CURDATE())";
+          break;
+        case "yearly":
+          dateFilter = "AND YEAR(date) = YEAR(CURDATE())";
+          break;
+      }
     }
 
-    // Get total income and expenses
+    // Just read from income and expenses tables
     const query = `
       SELECT 
-        SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as totalIncome,
-        SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as totalExpenses,
-        DATE(date) as date
-      FROM transactions
-      WHERE user_id = ? AND ${dateFilter}
-      GROUP BY DATE(date)
-      ORDER BY date DESC
+        (
+          SELECT COALESCE(SUM(amount), 0) 
+          FROM income 
+          WHERE user_id = ? ${dateFilter}
+        ) as totalIncome,
+        (
+          SELECT COALESCE(SUM(amount), 0) 
+          FROM expenses 
+          WHERE user_id = ? ${dateFilter}
+        ) as totalExpenses
     `;
 
-    const [results] = await db.execute(query, [userId]);
+    const [results] = await db.execute(query, params);
 
-    const summary = {
-      totalIncome: results.reduce(
-        (sum, day) => sum + parseFloat(day.totalIncome),
-        0
-      ),
-      totalExpenses: results.reduce(
-        (sum, day) => sum + parseFloat(day.totalExpenses),
-        0
-      ),
-      comparison: results.map((day) => ({
-        date: new Date(day.date).toLocaleDateString(),
-        income: parseFloat(day.totalIncome),
-        expenses: parseFloat(day.totalExpenses),
-      })),
-    };
+    // Calculate derived values
+    const totalIncome = parseFloat(results[0].totalIncome);
+    const totalExpenses = parseFloat(results[0].totalExpenses);
+    const netSavings = totalIncome - totalExpenses;
+    const savingsRate = totalIncome > 0 ? (netSavings / totalIncome) * 100 : 0;
 
-    res.json(summary);
+    res.json({
+      success: true,
+      data: {
+        totalIncome,
+        totalExpenses,
+        netSavings,
+        savingsRate,
+      },
+    });
   } catch (error) {
-    console.error("Error getting summary:", error);
-    res.status(500).json({ message: "Error getting summary data" });
+    console.error("Error getting analytics summary:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching analytics data",
+    });
   }
 };
 
 exports.getExpensesByCategory = async (req, res) => {
   try {
+    const { timeframe, start_date, end_date } = req.query;
+    const userId = req.user.id;
+
+    let dateFilter = "";
+    let params = [userId];
+
+    if (timeframe === "custom" && start_date && end_date) {
+      dateFilter = "AND e.date BETWEEN ? AND ?";
+      params.push(start_date, end_date);
+    } else {
+      switch (timeframe) {
+        case "daily":
+          dateFilter = "AND DATE(e.date) = CURDATE()";
+          break;
+        case "weekly":
+          dateFilter = "AND YEARWEEK(e.date) = YEARWEEK(CURDATE())";
+          break;
+        case "monthly":
+          dateFilter =
+            "AND YEAR(e.date) = YEAR(CURDATE()) AND MONTH(e.date) = MONTH(CURDATE())";
+          break;
+        case "yearly":
+          dateFilter = "AND YEAR(e.date) = YEAR(CURDATE())";
+          break;
+      }
+    }
+
+    // Read expenses grouped by category
+    const query = `
+      SELECT 
+        c.name as category,
+        COALESCE(SUM(e.amount), 0) as amount
+      FROM categories c
+      LEFT JOIN expenses e ON c.category_id = e.category_id 
+        AND e.user_id = ? ${dateFilter}
+      WHERE c.type = 'expense'
+      GROUP BY c.category_id, c.name
+      HAVING amount > 0
+      ORDER BY amount DESC
+    `;
+
+    const [categories] = await db.execute(query, params);
+
+    res.json({
+      success: true,
+      categories: categories.map((cat) => ({
+        category: cat.category,
+        amount: parseFloat(cat.amount),
+      })),
+    });
+  } catch (error) {
+    console.error("Error getting expenses by category:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching category data",
+    });
+  }
+};
+
+exports.getIncomeVsExpenses = async (req, res) => {
+  try {
     const { timeframe } = req.query;
     const userId = req.user.id;
 
-    let dateFilter;
+    let dateFormat, groupBy;
     switch (timeframe) {
       case "daily":
-        dateFilter = "DATE(date) = CURDATE()";
+        dateFormat = "%Y-%m-%d";
+        groupBy = "DATE(date)";
         break;
       case "weekly":
-        dateFilter = "YEARWEEK(date) = YEARWEEK(CURDATE())";
+        dateFormat = "%Y-W%u";
+        groupBy = "YEARWEEK(date)";
         break;
       case "monthly":
-        dateFilter =
-          "YEAR(date) = YEAR(CURDATE()) AND MONTH(date) = MONTH(CURDATE())";
+        dateFormat = "%Y-%m";
+        groupBy = 'DATE_FORMAT(date, "%Y-%m")';
+        break;
+      case "yearly":
+        dateFormat = "%Y";
+        groupBy = "YEAR(date)";
         break;
       default:
-        dateFilter = "MONTH(date) = MONTH(CURDATE())";
+        dateFormat = "%Y-%m";
+        groupBy = 'DATE_FORMAT(date, "%Y-%m")';
     }
 
     const query = `
       SELECT 
-        category,
-        SUM(amount) as total
-      FROM transactions
-      WHERE user_id = ? 
-        AND type = 'expense' 
-        AND ${dateFilter}
-      GROUP BY category
-      ORDER BY total DESC
+        period,
+        COALESCE(SUM(income), 0) as income,
+        COALESCE(SUM(expenses), 0) as expenses
+      FROM (
+        SELECT 
+          DATE_FORMAT(date, ?) as period,
+          amount as income,
+          0 as expenses
+        FROM income
+        WHERE user_id = ?
+        UNION ALL
+        SELECT 
+          DATE_FORMAT(date, ?) as period,
+          0 as income,
+          amount as expenses
+        FROM expenses
+        WHERE user_id = ?
+      ) combined
+      GROUP BY period
+      ORDER BY period DESC
+      LIMIT 12
     `;
 
-    const [results] = await db.execute(query, [userId]);
+    const [results] = await db.execute(query, [
+      dateFormat,
+      userId,
+      dateFormat,
+      userId,
+    ]);
 
-    const categories = results.map((cat) => ({
-      name: cat.category || "Other",
-      value: parseFloat(cat.total),
-    }));
-
-    res.json({ categories });
+    res.json({
+      success: true,
+      data: results.map((row) => ({
+        period: row.period,
+        income: parseFloat(row.income),
+        expenses: parseFloat(row.expenses),
+      })),
+    });
   } catch (error) {
-    console.error("Error getting expenses by category:", error);
-    res.status(500).json({ message: "Error getting category data" });
+    console.error("Error getting income vs expenses:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching comparison data",
+    });
   }
 };

@@ -1,85 +1,54 @@
-import { createContext, useContext, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { createContext, useState, useContext, useEffect } from "react";
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
-  const fetchUserData = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setLoading(false);
-        return;
-      }
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
-      const response = await fetch("http://localhost:5000/api/auth/me", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        setUser(data.user);
-      } else {
+  const checkAuth = async () => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const response = await fetch("http://localhost:5000/api/auth/profile", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data.user);
+        } else {
+          localStorage.removeItem("token");
+          setUser(null);
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
         localStorage.removeItem("token");
         setUser(null);
       }
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-      localStorage.removeItem("token");
+    } else {
       setUser(null);
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
-  useEffect(() => {
-    fetchUserData();
-  }, []);
-
-  const login = async (identifier, password) => {
-    try {
-      const response = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ identifier, password }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        localStorage.setItem("token", data.token);
-        setUser(data.user);
-        navigate("/dashboard");
-        return { success: true };
-      } else {
-        return { success: false, message: data.message };
-      }
-    } catch (error) {
-      console.error("Login error:", error);
-      return { success: false, message: "An error occurred during login" };
-    }
+  const login = (userData) => {
+    setUser(userData);
   };
 
   const logout = () => {
     localStorage.removeItem("token");
     setUser(null);
-    navigate("/login");
   };
 
   return (
-    <AuthContext.Provider
-      value={{ user, login, logout, loading, fetchUserData }}
-    >
-      {children}
+    <AuthContext.Provider value={{ user, login, logout, loading }}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 };

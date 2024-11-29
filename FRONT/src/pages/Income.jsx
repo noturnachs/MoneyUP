@@ -6,15 +6,34 @@ const Income = () => {
   const [incomeHistory, setIncomeHistory] = useState([]);
   const [newIncome, setNewIncome] = useState("");
   const [incomeDescription, setIncomeDescription] = useState("");
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
 
   useEffect(() => {
     fetchIncomeHistory();
+    fetchCategories();
   }, []);
 
   const fetchIncomeHistory = async () => {
     try {
+      const response = await fetch("http://localhost:5000/api/income", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setIncomeHistory(data.incomes || []);
+      }
+    } catch (error) {
+      console.error("Error fetching income history:", error);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
       const response = await fetch(
-        "http://localhost:5000/api/transactions/income-history",
+        "http://localhost:5000/api/categories/type/income",
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -23,33 +42,32 @@ const Income = () => {
       );
       const data = await response.json();
       if (response.ok) {
-        setIncomeHistory(data.incomeHistory || []);
+        setCategories(data.categories || []);
       }
     } catch (error) {
-      console.error("Error fetching income history:", error);
+      console.error("Error fetching categories:", error);
     }
   };
 
   const handleAddIncome = async (e) => {
     e.preventDefault();
 
-    if (!newIncome || !incomeDescription) {
+    if (!newIncome || !incomeDescription || !selectedCategory) {
       alert("Please fill in all fields");
       return;
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/transactions", {
+      const response = await fetch("http://localhost:5000/api/income", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify({
-          type: "income",
           amount: parseFloat(newIncome),
           description: incomeDescription,
-          category: "income",
+          category_id: selectedCategory,
           date: new Date().toISOString(),
         }),
       });
@@ -58,6 +76,7 @@ const Income = () => {
         await fetchIncomeHistory();
         setNewIncome("");
         setIncomeDescription("");
+        setSelectedCategory("");
         setShowIncomeForm(false);
       } else {
         const data = await response.json();
@@ -115,6 +134,28 @@ const Income = () => {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-400">
+                  Category
+                </label>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  required
+                  className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((category) => (
+                    <option
+                      key={category.category_id}
+                      value={category.category_id}
+                    >
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="flex justify-end space-x-3">
                 <button
                   type="button"
@@ -142,6 +183,7 @@ const Income = () => {
                 <tr className="text-left text-gray-400 text-sm">
                   <th className="p-4">Amount</th>
                   <th className="p-4">Description</th>
+                  <th className="p-4">Category</th>
                   <th className="p-4">Date</th>
                 </tr>
               </thead>
@@ -161,6 +203,7 @@ const Income = () => {
                       </span>
                     </td>
                     <td className="p-4">{income.description}</td>
+                    <td className="p-4">{income.category_name || "-"}</td>
                     <td className="p-4">
                       {new Date(income.date).toLocaleDateString()}
                     </td>

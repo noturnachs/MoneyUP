@@ -1,11 +1,37 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import TransactionForm from "../components/transactions/TransactionForm";
-import TransactionList from "../components/transactions/TransactionList";
 
 const Expenses = () => {
   const [expenses, setExpenses] = useState([]);
-  const [showTransactionForm, setShowTransactionForm] = useState(false);
+  const [showExpenseForm, setShowExpenseForm] = useState(false);
+  const [newExpense, setNewExpense] = useState("");
+  const [expenseDescription, setExpenseDescription] = useState("");
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
+
+  useEffect(() => {
+    fetchExpenses();
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/categories/type/expense",
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      const data = await response.json();
+      if (response.ok) {
+        setCategories(data.categories || []);
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
 
   const fetchExpenses = async () => {
     try {
@@ -16,18 +42,21 @@ const Expenses = () => {
       });
       const data = await response.json();
       if (response.ok) {
-        setExpenses(data.expenses);
+        setExpenses(data.expenses || []);
       }
     } catch (error) {
       console.error("Error fetching expenses:", error);
     }
   };
 
-  useEffect(() => {
-    fetchExpenses();
-  }, []);
+  const handleAddExpense = async (e) => {
+    e.preventDefault();
 
-  const handleAddExpense = async (expenseData) => {
+    if (!newExpense || !expenseDescription || !selectedCategory) {
+      alert("Please fill in all fields");
+      return;
+    }
+
     try {
       const response = await fetch("http://localhost:5000/api/expenses", {
         method: "POST",
@@ -35,15 +64,27 @@ const Expenses = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-        body: JSON.stringify(expenseData),
+        body: JSON.stringify({
+          amount: parseFloat(newExpense),
+          description: expenseDescription,
+          category_id: selectedCategory,
+          date: new Date().toISOString(),
+        }),
       });
 
       if (response.ok) {
-        setShowTransactionForm(false);
         await fetchExpenses();
+        setNewExpense("");
+        setExpenseDescription("");
+        setSelectedCategory("");
+        setShowExpenseForm(false);
+      } else {
+        const data = await response.json();
+        alert(data.message || "Failed to add expense");
       }
     } catch (error) {
       console.error("Error adding expense:", error);
+      alert("An error occurred. Please try again.");
     }
   };
 
@@ -53,25 +94,121 @@ const Expenses = () => {
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold text-white">Expenses</h1>
           <button
-            onClick={() => setShowTransactionForm(!showTransactionForm)}
+            onClick={() => setShowExpenseForm(!showExpenseForm)}
             className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
           >
             + Add Expense
           </button>
         </div>
 
-        {showTransactionForm && (
+        {showExpenseForm && (
           <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
-            <TransactionForm
-              onSubmit={handleAddExpense}
-              type="expense"
-              onCancel={() => setShowTransactionForm(false)}
-            />
+            <form onSubmit={handleAddExpense} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-400">
+                  Amount
+                </label>
+                <input
+                  type="number"
+                  value={newExpense}
+                  onChange={(e) => setNewExpense(e.target.value)}
+                  className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+                  required
+                  step="0.01"
+                  min="0"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-400">
+                  Description
+                </label>
+                <input
+                  type="text"
+                  value={expenseDescription}
+                  onChange={(e) => setExpenseDescription(e.target.value)}
+                  className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-400">
+                  Category
+                </label>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  required
+                  className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((category) => (
+                    <option
+                      key={category.category_id}
+                      value={category.category_id}
+                    >
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowExpenseForm(false)}
+                  className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                >
+                  Add Expense
+                </button>
+              </div>
+            </form>
           </div>
         )}
 
         <div className="bg-gray-800 rounded-xl border border-gray-700">
-          <TransactionList expenses={expenses} />
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-gray-400 text-sm">
+                  <th className="p-4">Amount</th>
+                  <th className="p-4">Description</th>
+                  <th className="p-4">Category</th>
+                  <th className="p-4">Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700">
+                {expenses.map((expense) => (
+                  <tr
+                    key={expense.id}
+                    className="text-gray-300 hover:bg-gray-700/50"
+                  >
+                    <td className="p-4">
+                      <span className="text-red-500">
+                        -₱
+                        {parseFloat(expense.amount).toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                    </td>
+                    <td className="p-4">{expense.description}</td>
+                    <td className="p-4">{expense.category_name || "-"}</td>
+                    <td className="p-4">
+                      {new Date(expense.date).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

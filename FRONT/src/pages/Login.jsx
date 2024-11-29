@@ -1,11 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 
 const Login = () => {
+  const navigate = useNavigate();
   const { login } = useAuth();
   const [formData, setFormData] = useState({
-    identifier: "",
+    email: "",
     password: "",
   });
   const [error, setError] = useState("");
@@ -24,11 +26,29 @@ const Login = () => {
     setError("");
 
     try {
-      const result = await login(formData.identifier, formData.password);
-      if (!result.success) {
-        setError(result.message);
+      const response = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.token) {
+        // Store the raw token without 'Bearer ' prefix
+        localStorage.setItem("token", data.token);
+        login(data.user);
+        navigate("/dashboard");
+      } else {
+        setError(data.message || "Login failed");
       }
     } catch (error) {
+      console.error("Login error:", error);
       setError("An error occurred during login");
     } finally {
       setIsLoading(false);
@@ -46,18 +66,18 @@ const Login = () => {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-4">
             <div>
-              <label htmlFor="identifier" className="sr-only">
-                Username or Email
+              <label htmlFor="email" className="sr-only">
+                Email
               </label>
               <input
-                id="identifier"
-                name="identifier"
-                type="text"
+                id="email"
+                name="email"
+                type="email"
                 required
-                value={formData.identifier}
+                value={formData.email}
                 onChange={handleChange}
                 className="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-700 bg-gray-800 text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
-                placeholder="Username or Email"
+                placeholder="Email"
               />
             </div>
             <div>

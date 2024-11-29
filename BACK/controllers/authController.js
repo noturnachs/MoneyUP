@@ -1,38 +1,45 @@
-const User = require("../models/User");
 const jwt = require("jsonwebtoken");
-const bcrypt = require("bcrypt");
+const User = require("../models/User");
 const db = require("../config/database");
-
-const generateToken = (user) => {
-  return jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, {
-    expiresIn: "24h",
-  });
-};
+const bcrypt = require("bcrypt");
 
 exports.register = async (req, res) => {
   try {
-    const { firstName, lastName, username, email, password } = req.body;
+    const { first_name, last_name, username, email, password } = req.body;
 
-    // Check if username or email already exists
-    const [existingUsers] = await db.execute(
-      "SELECT id FROM users WHERE username = ? OR email = ?",
-      [username, email]
+    // Check if email already exists
+    const [existingEmail] = await db.execute(
+      "SELECT user_id FROM users WHERE email = ?",
+      [email]
     );
 
-    if (existingUsers.length > 0) {
+    if (existingEmail.length > 0) {
       return res.status(400).json({
         success: false,
-        message: "Username or email already exists",
+        message: "Email already registered",
+      });
+    }
+
+    // Check if username already exists
+    const [existingUsername] = await db.execute(
+      "SELECT user_id FROM users WHERE username = ?",
+      [username]
+    );
+
+    if (existingUsername.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Username already taken",
       });
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Insert new user
     const [result] = await db.execute(
       "INSERT INTO users (first_name, last_name, username, email, password) VALUES (?, ?, ?, ?, ?)",
-      [firstName, lastName, username, email, hashedPassword]
+      [first_name, last_name, username, email, hashedPassword]
     );
 
     res.status(201).json({
@@ -43,200 +50,171 @@ exports.register = async (req, res) => {
     console.error("Registration error:", error);
     res.status(500).json({
       success: false,
-      message: "Server error",
+      message: "Error during registration",
     });
   }
 };
 
 exports.login = async (req, res) => {
   try {
-    const { identifier, password } = req.body;
+    const { email, password } = req.body;
+    console.log("Login attempt:", { email, password: "provided" });
 
-    if (!identifier || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide both identifier and password",
-      });
-    }
-
-    const [users] = await db.execute(
-      "SELECT id, first_name, last_name, username, email, password FROM users WHERE email = ? OR username = ?",
-      [identifier, identifier]
-    );
+    // Find user by email
+    const [users] = await db.execute("SELECT * FROM users WHERE email = ?", [
+      email,
+    ]);
 
     if (users.length === 0) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
-        message: "Invalid credentials",
+        message: "Invalid email or password",
       });
     }
 
     const user = users[0];
-    const isValidPassword = await bcrypt.compare(password, user.password);
 
-    if (!isValidPassword) {
-      return res.status(400).json({
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
         success: false,
-        message: "Invalid credentials",
+        message: "Invalid email or password",
       });
     }
 
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-      expiresIn: "24h",
-    });
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        id: user.user_id,
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "24h",
+      }
+    );
 
-    const userData = {
-      id: user.id,
-      name: `${user.first_name} ${user.last_name}`,
-      username: user.username,
-      email: user.email,
-      firstName: user.first_name,
-      lastName: user.last_name,
-    };
-
+    // Send response
     res.json({
       success: true,
       token,
-      user: userData,
+      user: {
+        id: user.user_id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        username: user.username,
+      },
     });
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({
       success: false,
-      message: "Server error",
-    });
-  }
-};
-
-exports.verifyToken = async (req, res) => {
-  try {
-    const user = await User.findByEmail(req.user.email);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    const { password: _, ...userWithoutPassword } = user;
-    res.json({
-      success: true,
-      user: userWithoutPassword,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Token verification failed",
+      message: "Server error during login",
     });
   }
 };
 
 exports.updateProfile = async (req, res) => {
-  let connection;
   try {
     const { firstName, lastName, email, currentPassword, newPassword } =
       req.body;
     const userId = req.user.id;
 
-    // Get a connection from the pool
-    connection = await db.getConnection();
+    // Start building the query and parameters
+    let updateFields = [];
+    let params = [];
+    let query = "UPDATE users SET ";
 
-    // Start transaction
-    await connection.beginTransaction();
+    // Add first name if provided
+    if (firstName !== undefined) {
+      updateFields.push("first_name = ?");
+      params.push(firstName);
+    }
 
-    try {
-      // If changing password, verify current password
-      if (newPassword) {
-        const [users] = await connection.execute(
-          "SELECT password FROM users WHERE id = ?",
-          [userId]
-        );
+    // Add last name if provided
+    if (lastName !== undefined) {
+      updateFields.push("last_name = ?");
+      params.push(lastName);
+    }
 
-        if (users.length === 0) {
-          await connection.rollback();
-          return res.status(404).json({
-            success: false,
-            message: "User not found",
-          });
-        }
-
-        const isValidPassword = await bcrypt.compare(
-          currentPassword,
-          users[0].password
-        );
-
-        if (!isValidPassword) {
-          await connection.rollback();
-          return res.status(400).json({
-            success: false,
-            message: "Current password is incorrect",
-          });
-        }
-
-        // Hash new password
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-        await connection.execute("UPDATE users SET password = ? WHERE id = ?", [
-          hashedPassword,
-          userId,
-        ]);
-      }
-
-      // Update user information
-      await connection.execute(
-        "UPDATE users SET first_name = ?, last_name = ?, email = ? WHERE id = ?",
-        [firstName, lastName, email, userId]
+    // Add email if provided
+    if (email !== undefined) {
+      // Check if email is already taken by another user
+      const [existingUser] = await db.execute(
+        "SELECT user_id FROM users WHERE email = ? AND user_id != ?",
+        [email, userId]
       );
 
-      // Get updated user data
-      const [updatedUsers] = await connection.execute(
-        "SELECT id, first_name, last_name, username, email FROM users WHERE id = ?",
-        [userId]
-      );
-
-      if (updatedUsers.length === 0) {
-        await connection.rollback();
-        return res.status(404).json({
+      if (existingUser.length > 0) {
+        return res.status(400).json({
           success: false,
-          message: "User not found",
+          message: "Email is already in use",
         });
       }
 
-      const user = updatedUsers[0];
-      const userData = {
-        id: user.id,
-        name: `${user.first_name} ${user.last_name}`,
-        username: user.username,
-        email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
-      };
-
-      // Commit the transaction
-      await connection.commit();
-
-      res.json({
-        success: true,
-        message: "Profile updated successfully",
-        user: userData,
-      });
-    } catch (error) {
-      // Rollback on error
-      if (connection) {
-        await connection.rollback();
-      }
-      throw error;
+      updateFields.push("email = ?");
+      params.push(email);
     }
+
+    // Handle password update if provided
+    if (newPassword && currentPassword) {
+      // Verify current password
+      const [user] = await db.execute(
+        "SELECT password FROM users WHERE user_id = ?",
+        [userId]
+      );
+
+      const isPasswordValid = await bcrypt.compare(
+        currentPassword,
+        user[0].password
+      );
+
+      if (!isPasswordValid) {
+        return res.status(400).json({
+          success: false,
+          message: "Current password is incorrect",
+        });
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      updateFields.push("password = ?");
+      params.push(hashedPassword);
+    }
+
+    // Add user_id to params
+    params.push(userId);
+
+    // Complete the query
+    query += updateFields.join(", ") + " WHERE user_id = ?";
+
+    // Execute update
+    await db.execute(query, params);
+
+    // Fetch updated user data
+    const [updatedUser] = await db.execute(
+      "SELECT user_id, email, first_name, last_name FROM users WHERE user_id = ?",
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      message: "Profile updated successfully",
+      user: {
+        id: updatedUser[0].user_id,
+        email: updatedUser[0].email,
+        firstName: updatedUser[0].first_name,
+        lastName: updatedUser[0].last_name,
+      },
+    });
   } catch (error) {
     console.error("Error updating profile:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to update profile",
+      message: "Error updating profile",
     });
-  } finally {
-    // Release the connection back to the pool
-    if (connection) {
-      connection.release();
-    }
   }
 };
 
@@ -244,18 +222,23 @@ exports.deleteAccount = async (req, res) => {
   try {
     const userId = req.user.id;
 
+    // Begin transaction
     await db.beginTransaction();
 
     try {
-      // Delete user's transactions
-      await db.execute("DELETE FROM transactions WHERE user_id = ?", [userId]);
-
       // Delete user's expenses
       await db.execute("DELETE FROM expenses WHERE user_id = ?", [userId]);
 
-      // Delete user
-      await db.execute("DELETE FROM users WHERE id = ?", [userId]);
+      // Delete user's income records
+      await db.execute("DELETE FROM income WHERE user_id = ?", [userId]);
 
+      // Delete user's categories
+      await db.execute("DELETE FROM categories WHERE user_id = ?", [userId]);
+
+      // Finally delete the user
+      await db.execute("DELETE FROM users WHERE user_id = ?", [userId]);
+
+      // Commit transaction
       await db.commit();
 
       res.json({
@@ -263,6 +246,7 @@ exports.deleteAccount = async (req, res) => {
         message: "Account deleted successfully",
       });
     } catch (error) {
+      // Rollback in case of error
       await db.rollback();
       throw error;
     }
@@ -270,44 +254,96 @@ exports.deleteAccount = async (req, res) => {
     console.error("Error deleting account:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to delete account",
+      message: "Error deleting account",
     });
   }
 };
 
-exports.getMe = async (req, res) => {
+exports.verifyToken = async (req, res) => {
   try {
-    const [users] = await db.execute(
-      "SELECT id, first_name, last_name, username, email FROM users WHERE id = ?",
-      [req.user.id]
-    );
-
-    if (users.length === 0) {
+    const user = await User.findById(req.user.id);
+    if (!user) {
       return res.status(404).json({
         success: false,
         message: "User not found",
       });
     }
 
-    const user = users[0];
-    const userData = {
-      id: user.id,
-      name: `${user.first_name} ${user.last_name}`,
-      username: user.username,
-      email: user.email,
-      firstName: user.first_name,
-      lastName: user.last_name,
-    };
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    console.error("Token verification error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to verify token",
+    });
+  }
+};
+
+exports.getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
     res.json({
       success: true,
-      user: userData,
+      user: {
+        id: user.id,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        email: user.email,
+      },
     });
   } catch (error) {
-    console.error("Error fetching user data:", error);
+    console.error("Get user error:", error);
     res.status(500).json({
       success: false,
-      message: "Error fetching user data",
+      message: "Failed to get user information",
+    });
+  }
+};
+
+exports.getProfile = async (req, res) => {
+  try {
+    const [user] = await db.execute(
+      "SELECT user_id, username, email, first_name, last_name FROM users WHERE user_id = ?",
+      [req.user.id]
+    );
+
+    if (user.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      user: {
+        id: user[0].user_id,
+        username: user[0].username,
+        email: user[0].email,
+        firstName: user[0].first_name,
+        lastName: user[0].last_name,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching profile:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching profile",
     });
   }
 };

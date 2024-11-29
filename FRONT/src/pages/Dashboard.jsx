@@ -30,18 +30,20 @@ const Dashboard = () => {
     balanceBefore: 0,
   });
   const [recentTransactions, setRecentTransactions] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
 
   // Check if user has any transactions
   useEffect(() => {
     const checkUserData = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/transactions", {
+        const response = await fetch("http://localhost:5000/api/income", {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         });
         const data = await response.json();
-        setHasData(data.transactions && data.transactions.length > 0);
+        setHasData(data.incomes && data.incomes.length > 0);
       } catch (error) {
         console.error("Error checking user data:", error);
       } finally {
@@ -55,23 +57,39 @@ const Dashboard = () => {
   // Move fetchBalanceData outside useEffect
   const fetchBalanceData = async () => {
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/transactions/balance",
+      // First, get total income
+      const incomeResponse = await fetch(
+        "http://localhost:5000/api/income/total",
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         }
       );
-      const data = await response.json();
-      if (response.ok) {
-        setBalanceData({
-          totalBalance: data.totalBalance || 0,
-          currentBalance: data.currentBalance || 0,
-          monthlyExpenses: data.monthlyExpenses || 0,
-          expenseChange: data.expenseChange || 0,
-        });
-      }
+      const incomeData = await incomeResponse.json();
+
+      // Then get total expenses
+      const expenseResponse = await fetch(
+        "http://localhost:5000/api/expenses/total",
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      const expenseData = await expenseResponse.json();
+
+      // Calculate balances
+      const totalIncome = parseFloat(incomeData.total || 0);
+      const totalExpenses = parseFloat(expenseData.total || 0);
+      const currentBalance = totalIncome - totalExpenses;
+
+      setBalanceData({
+        totalBalance: totalIncome,
+        currentBalance: currentBalance,
+        monthlyExpenses: totalExpenses,
+        expenseChange: 0, // You can calculate this separately if needed
+      });
     } catch (error) {
       console.error("Error fetching balance:", error);
     }
@@ -80,45 +98,68 @@ const Dashboard = () => {
   // Add function to fetch income history
   const fetchIncomeHistory = async () => {
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/transactions/income-history",
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      const response = await fetch("http://localhost:5000/api/income", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
       const data = await response.json();
       if (response.ok) {
-        setIncomeHistory(data.incomeHistory || []);
+        setIncomeHistory(data.incomes || []);
       }
     } catch (error) {
       console.error("Error fetching income history:", error);
     }
   };
 
-  // Add this function to fetch the last transaction
+  // Update the fetchLastTransaction function
   const fetchLastTransaction = async () => {
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/transactions/last",
-        {
+      // Fetch both income and expenses
+      const [incomeResponse, expenseResponse] = await Promise.all([
+        fetch("http://localhost:5000/api/income/recent", {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-        }
-      );
-      const data = await response.json();
-      if (response.ok && data.transaction) {
+        }),
+        fetch("http://localhost:5000/api/expenses/recent", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }),
+      ]);
+
+      const incomeData = await incomeResponse.json();
+      const expenseData = await expenseResponse.json();
+
+      // Get the most recent transaction from both types
+      const allTransactions = [
+        ...(incomeData.incomes || []).map((income) => ({
+          ...income,
+          type: "income",
+          change: parseFloat(income.amount),
+        })),
+        ...(expenseData.expenses || []).map((expense) => ({
+          ...expense,
+          type: "expense",
+          change: -parseFloat(expense.amount),
+        })),
+      ];
+
+      // Sort by date and get the most recent
+      allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+      const lastTransaction = allTransactions[0];
+
+      if (lastTransaction) {
         setBalanceChanges({
           totalChange:
-            data.transaction.type === "income"
-              ? parseFloat(data.transaction.amount)
+            lastTransaction.type === "income"
+              ? parseFloat(lastTransaction.amount)
               : 0,
-          currentChange: data.transaction.change,
-          lastChangeDate: data.transaction.date,
-          balanceAfter: data.transaction.balance_after,
-          balanceBefore: data.transaction.balance_before,
+          currentChange: lastTransaction.change,
+          lastChangeDate: lastTransaction.date,
+          balanceAfter: lastTransaction.balance_after || 0,
+          balanceBefore: lastTransaction.balance_before || 0,
         });
       }
     } catch (error) {
@@ -126,11 +167,52 @@ const Dashboard = () => {
     }
   };
 
-  // Add this function to fetch all recent transactions
+  // Update the fetchRecentTransactions function
   const fetchRecentTransactions = async () => {
     try {
+      // Fetch both income and expenses
+      const [incomeResponse, expenseResponse] = await Promise.all([
+        fetch("http://localhost:5000/api/income/recent", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }),
+        fetch("http://localhost:5000/api/expenses/recent", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }),
+      ]);
+
+      const incomeData = await incomeResponse.json();
+      const expenseData = await expenseResponse.json();
+
+      // Combine and format transactions
+      const allTransactions = [
+        ...(incomeData.incomes || []).map((income) => ({
+          ...income,
+          type: "income",
+        })),
+        ...(expenseData.expenses || []).map((expense) => ({
+          ...expense,
+          type: "expense",
+        })),
+      ];
+
+      // Sort by date, most recent first
+      allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      setRecentTransactions(allTransactions);
+    } catch (error) {
+      console.error("Error fetching recent transactions:", error);
+    }
+  };
+
+  // Add this new function to fetch categories
+  const fetchCategories = async () => {
+    try {
       const response = await fetch(
-        "http://localhost:5000/api/transactions/recent",
+        "http://localhost:5000/api/categories/type/income",
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -139,12 +221,17 @@ const Dashboard = () => {
       );
       const data = await response.json();
       if (response.ok) {
-        setRecentTransactions(data.transactions || []);
+        setCategories(data.categories || []);
       }
     } catch (error) {
-      console.error("Error fetching recent transactions:", error);
+      console.error("Error fetching categories:", error);
     }
   };
+
+  // Add a separate useEffect for fetching categories
+  useEffect(() => {
+    fetchCategories();
+  }, []); // This will run when component mounts
 
   // Update useEffect to fetch both balance and income history
   useEffect(() => {
@@ -158,24 +245,29 @@ const Dashboard = () => {
 
   const handleInitialSetup = async (e) => {
     e.preventDefault();
+
+    if (!initialBalance || !selectedCategory) {
+      alert("Please fill in all fields");
+      return;
+    }
+
     try {
-      const response = await fetch("http://localhost:5000/api/transactions", {
+      const response = await fetch("http://localhost:5000/api/income", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify({
-          type: "income",
           amount: initialBalance,
-          category: "initial_balance",
           description: "Initial Balance",
+          category_id: selectedCategory,
           date: new Date().toISOString(),
         }),
       });
 
       if (response.ok) {
-        setStep(3); // Show success message
+        setStep(3);
         setTimeout(() => {
           setHasData(true);
           window.location.reload();
@@ -189,24 +281,22 @@ const Dashboard = () => {
   const handleAddIncome = async (e) => {
     e.preventDefault();
 
-    // Validate input
-    if (!newIncome || !incomeDescription) {
+    if (!newIncome || !incomeDescription || !selectedCategory) {
       alert("Please fill in all fields");
       return;
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/transactions", {
+      const response = await fetch("http://localhost:5000/api/income", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify({
-          type: "income",
           amount: parseFloat(newIncome),
           description: incomeDescription,
-          category: "income",
+          category_id: selectedCategory,
           date: new Date().toISOString(),
         }),
       });
@@ -214,20 +304,18 @@ const Dashboard = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // Update balances and history
         await fetchBalanceData();
         await fetchIncomeHistory();
-
-        // Set the changes with timestamp
         setBalanceChanges({
           totalChange: parseFloat(newIncome),
           currentChange: parseFloat(newIncome),
           lastChangeDate: new Date().toISOString(),
         });
 
-        // Clear form
+        // Clear form including category
         setNewIncome("");
         setIncomeDescription("");
+        setSelectedCategory("");
       } else {
         console.error("Failed to add income:", data.message);
         alert("Failed to add income. Please try again.");
@@ -304,8 +392,8 @@ const Dashboard = () => {
                 onSubmit={handleInitialSetup}
                 className="max-w-md mx-auto space-y-6"
               >
-                <div>
-                  <div className="relative mt-4">
+                <div className="space-y-4">
+                  <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <span className="text-gray-400">₱</span>
                     </div>
@@ -319,7 +407,25 @@ const Dashboard = () => {
                       placeholder="0.00"
                     />
                   </div>
+
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    required
+                    className="block w-full px-3 py-3 border border-gray-700 rounded-lg bg-gray-700 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map((category) => (
+                      <option
+                        key={category.category_id}
+                        value={category.category_id}
+                      >
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+
                 <div className="flex space-x-4">
                   <button
                     type="button"
@@ -368,7 +474,7 @@ const Dashboard = () => {
                 maximumFractionDigits: 2,
               })}
             </p>
-            {balanceChanges?.totalChange > 0 && (
+            {balanceChanges?.totalChange !== 0 && (
               <div className="flex items-center text-sm text-green-500">
                 <span>
                   +₱
@@ -508,7 +614,7 @@ const Dashboard = () => {
                     {transaction.description}
                   </td>
                   <td className="p-4 hidden md:table-cell">
-                    {transaction.category || "-"}
+                    {transaction.category_name || "-"}
                   </td>
                   <td className="p-4">
                     {new Date(transaction.date).toLocaleDateString()}

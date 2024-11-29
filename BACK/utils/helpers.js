@@ -1,0 +1,56 @@
+const formatDate = (date) => {
+  return new Date(date).toISOString().split("T")[0];
+};
+
+const calculateBalance = (transactions) => {
+  return transactions.reduce((acc, transaction) => {
+    if (transaction.type === "income") {
+      return acc + parseFloat(transaction.amount);
+    } else {
+      return acc - parseFloat(transaction.amount);
+    }
+  }, 0);
+};
+
+const validateTransaction = (data) => {
+  const errors = [];
+
+  if (!data.amount || isNaN(parseFloat(data.amount))) {
+    errors.push("Valid amount is required");
+  }
+
+  if (!data.type || !["income", "expense"].includes(data.type)) {
+    errors.push("Valid type (income/expense) is required");
+  }
+
+  if (!data.description || data.description.trim().length === 0) {
+    errors.push("Description is required");
+  }
+
+  return errors;
+};
+
+const validateUser = (data) => {
+  const errors = [];
+
+  if (!data.email || !data.email.includes("@")) {
+    errors.push("Valid email is required");
+  }
+
+  if (!data.username || data.username.length < 3) {
+    errors.push("Username must be at least 3 characters long");
+  }
+
+  if (!data.password || data.password.length < 6) {
+    errors.push("Password must be at least 6 characters long");
+  }
+
+  return errors;
+};
+
+module.exports = {
+  formatDate,
+  calculateBalance,
+  validateTransaction,
+  validateUser,
+};

@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const db = require("./config/database");
+const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
 
@@ -24,20 +25,29 @@ testConnection();
 
 // Routes
 app.use("/api/auth", require("./routes/auth"));
-app.use("/api/transactions", require("./routes/transactions"));
+app.use("/api/income", require("./routes/income"));
 app.use("/api/expenses", require("./routes/expenses"));
+app.use("/api/categories", require("./routes/categories"));
 app.use("/api/analytics", require("./routes/analytics"));
-
 // Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
+app.use(errorHandler);
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
     success: false,
-    message: "Internal server error",
+    message: "Route not found",
   });
 });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+// Handle unhandled promise rejections
+process.on("unhandledRejection", (err) => {
+  console.error("Unhandled Promise Rejection:", err);
+  // Close server & exit process
+  server.close(() => process.exit(1));
 });

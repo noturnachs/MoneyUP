@@ -32,6 +32,18 @@ const Register = () => {
       return;
     }
 
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters long");
+      setIsLoading(false);
+      return;
+    }
+
+    if (formData.username.length < 3) {
+      setError("Username must be at least 3 characters long");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch("http://localhost:5000/api/auth/register", {
         method: "POST",
@@ -39,8 +51,8 @@ const Register = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
           username: formData.username,
           email: formData.email,
           password: formData.password,
@@ -50,12 +62,15 @@ const Register = () => {
       const data = await response.json();
 
       if (response.ok) {
-        navigate("/login");
+        navigate("/login", {
+          state: { message: "Registration successful! Please login." },
+        });
       } else {
         setError(data.message || "Registration failed");
       }
     } catch (error) {
       setError("An error occurred during registration");
+      console.error("Registration error:", error);
     } finally {
       setIsLoading(false);
     }

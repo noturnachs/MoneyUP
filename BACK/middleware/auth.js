@@ -1,30 +1,62 @@
 const jwt = require("jsonwebtoken");
+const db = require("../config/database");
 
-const authMiddleware = (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
   try {
-    const authHeader = req.header("Authorization");
-    const token = authHeader && authHeader.replace("Bearer ", "");
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+      return res.status(401).json({
+        success: false,
+        message: "Authorization header is missing",
+      });
+    }
+
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : authHeader;
 
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: "No token, authorization denied",
+        message: "No token provided",
       });
     }
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = decoded;
+
+      const [users] = await db.execute(
+        "SELECT user_id, email, first_name, last_name, username FROM users WHERE user_id = ?",
+        [decoded.id]
+      );
+
+      if (users.length === 0) {
+        return res.status(401).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      req.user = {
+        id: users[0].user_id,
+        email: users[0].email,
+        firstName: users[0].first_name,
+        lastName: users[0].last_name,
+        username: users[0].username,
+      };
+
       next();
-    } catch (err) {
-      res.status(401).json({
+    } catch (jwtError) {
+      console.error("JWT Verification Error:", jwtError);
+      return res.status(401).json({
         success: false,
         message: "Invalid token",
       });
     }
   } catch (error) {
-    console.error("Auth middleware error:", error);
-    res.status(500).json({
+    console.error("Auth Middleware Error:", error);
+    return res.status(500).json({
       success: false,
       message: "Server error",
     });

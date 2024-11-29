@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import {
+  ResponsiveContainer,
   BarChart,
   Bar,
   XAxis,
@@ -7,7 +8,6 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
@@ -17,9 +17,15 @@ import {
 
 const Analytics = () => {
   const [timeframe, setTimeframe] = useState("monthly");
-  const [summaryData, setSummaryData] = useState(null);
+  const [summaryData, setSummaryData] = useState({
+    totalIncome: 0,
+    totalExpenses: 0,
+    netSavings: 0,
+    savingsRate: 0,
+  });
   const [expensesByCategory, setExpensesByCategory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [incomeVsExpenses, setIncomeVsExpenses] = useState([]);
 
   const COLORS = [
     "#8b5cf6", // purple-500
@@ -32,27 +38,47 @@ const Analytics = () => {
     "#22c55e", // green-500
   ];
 
-  useEffect(() => {
-    fetchAnalyticsData();
-  }, [timeframe]);
-
   const fetchAnalyticsData = async () => {
     setIsLoading(true);
     try {
       // Fetch summary data
       const summaryResponse = await fetch(
-        `http://localhost:5000/api/analytics/summary?timeframe=${timeframe}`,
+        `http://localhost:5000/api/income/total`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         }
       );
-      const summaryData = await summaryResponse.json();
+      const incomeData = await summaryResponse.json();
+
+      const expenseResponse = await fetch(
+        `http://localhost:5000/api/expenses/total`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      const expenseData = await expenseResponse.json();
+
+      // Calculate summary data
+      const totalIncome = parseFloat(incomeData.total || 0);
+      const totalExpenses = parseFloat(expenseData.total || 0);
+      const netSavings = totalIncome - totalExpenses;
+      const savingsRate =
+        totalIncome > 0 ? (netSavings / totalIncome) * 100 : 0;
+
+      setSummaryData({
+        totalIncome,
+        totalExpenses,
+        netSavings,
+        savingsRate,
+      });
 
       // Fetch expenses by category
       const categoryResponse = await fetch(
-        `http://localhost:5000/api/analytics/expenses-by-category?timeframe=${timeframe}`,
+        `http://localhost:5000/api/expenses/by-category`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -60,9 +86,19 @@ const Analytics = () => {
         }
       );
       const categoryData = await categoryResponse.json();
+      setExpensesByCategory(categoryData.categories || []);
 
-      setSummaryData(summaryData);
-      setExpensesByCategory(categoryData.categories);
+      // Fetch income vs expenses data
+      const trendResponse = await fetch(
+        `http://localhost:5000/api/analytics/income-vs-expenses?timeframe=${timeframe}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      const trendData = await trendResponse.json();
+      setIncomeVsExpenses(trendData.data || []);
     } catch (error) {
       console.error("Error fetching analytics data:", error);
     } finally {
@@ -70,6 +106,11 @@ const Analytics = () => {
     }
   };
 
+  useEffect(() => {
+    fetchAnalyticsData();
+  }, [timeframe]);
+
+  // Format currency
   const formatCurrency = (value) => {
     return new Intl.NumberFormat("en-PH", {
       style: "currency",
@@ -77,13 +118,22 @@ const Analytics = () => {
     }).format(value);
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
-      </div>
-    );
-  }
+  // Custom tooltip for charts
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-gray-800 p-4 border border-gray-700 rounded-lg">
+          <p className="text-gray-300">{label}</p>
+          {payload.map((entry, index) => (
+            <p key={index} style={{ color: entry.color }}>
+              {entry.name}: {formatCurrency(entry.value)}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -93,40 +143,44 @@ const Analytics = () => {
         <select
           value={timeframe}
           onChange={(e) => setTimeframe(e.target.value)}
-          className="bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="bg-gray-700 text-white rounded-lg px-4 py-2 border border-gray-600"
         >
           <option value="daily">Daily</option>
           <option value="weekly">Weekly</option>
           <option value="monthly">Monthly</option>
+          <option value="yearly">Yearly</option>
         </select>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
           <h3 className="text-gray-400 text-sm font-medium">Total Income</h3>
           <p className="text-2xl font-bold text-white mt-2">
-            {formatCurrency(summaryData?.totalIncome || 0)}
+            {formatCurrency(summaryData.totalIncome)}
           </p>
         </div>
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
           <h3 className="text-gray-400 text-sm font-medium">Total Expenses</h3>
           <p className="text-2xl font-bold text-white mt-2">
-            {formatCurrency(summaryData?.totalExpenses || 0)}
+            {formatCurrency(summaryData.totalExpenses)}
           </p>
         </div>
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
           <h3 className="text-gray-400 text-sm font-medium">Net Savings</h3>
           <p className="text-2xl font-bold text-white mt-2">
-            {formatCurrency(
-              (summaryData?.totalIncome || 0) -
-                (summaryData?.totalExpenses || 0)
-            )}
+            {formatCurrency(summaryData.netSavings)}
+          </p>
+        </div>
+        <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
+          <h3 className="text-gray-400 text-sm font-medium">Savings Rate</h3>
+          <p className="text-2xl font-bold text-white mt-2">
+            {summaryData.savingsRate.toFixed(1)}%
           </p>
         </div>
       </div>
 
-      {/* Charts */}
+      {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Income vs Expenses Bar Chart */}
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
@@ -135,54 +189,22 @@ const Analytics = () => {
           </h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={summaryData?.comparison || []}
-                margin={{ top: 20, right: 30, left: 60, bottom: 20 }}
-              >
+              <BarChart data={incomeVsExpenses}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis
-                  dataKey="date"
+                  dataKey="period"
                   stroke="#9CA3AF"
                   tick={{ fill: "#9CA3AF" }}
-                  tickMargin={10}
                 />
                 <YAxis
                   stroke="#9CA3AF"
                   tick={{ fill: "#9CA3AF" }}
                   tickFormatter={(value) => `₱${value.toLocaleString()}`}
-                  width={80}
                 />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#1F2937",
-                    border: "1px solid #374151",
-                    borderRadius: "0.5rem",
-                    padding: "8px",
-                  }}
-                  formatter={(value) => [
-                    `₱${value.toLocaleString()}`,
-                    undefined,
-                  ]}
-                  labelStyle={{ color: "#9CA3AF" }}
-                />
-                <Legend
-                  wrapperStyle={{ paddingTop: "20px" }}
-                  formatter={(value) => (
-                    <span style={{ color: "#9CA3AF" }}>{value}</span>
-                  )}
-                />
-                <Bar
-                  dataKey="income"
-                  fill="#10B981"
-                  name="Income"
-                  radius={[4, 4, 0, 0]}
-                />
-                <Bar
-                  dataKey="expenses"
-                  fill="#EF4444"
-                  name="Expenses"
-                  radius={[4, 4, 0, 0]}
-                />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                <Bar dataKey="income" name="Income" fill="#10B981" />
+                <Bar dataKey="expenses" name="Expenses" fill="#EF4444" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -198,38 +220,15 @@ const Analytics = () => {
               <PieChart>
                 <Pie
                   data={expensesByCategory}
+                  dataKey="amount"
+                  nameKey="category"
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={({
-                    cx,
-                    cy,
-                    midAngle,
-                    innerRadius,
-                    outerRadius,
-                    percent,
-                    name,
-                  }) => {
-                    const radius =
-                      innerRadius + (outerRadius - innerRadius) * 0.5;
-                    const x =
-                      cx + radius * Math.cos(-midAngle * (Math.PI / 180));
-                    const y =
-                      cy + radius * Math.sin(-midAngle * (Math.PI / 180));
-                    return percent > 0.05 ? (
-                      <text
-                        x={x}
-                        y={y}
-                        fill="white"
-                        textAnchor={x > cx ? "start" : "end"}
-                        dominantBaseline="central"
-                      >
-                        {`${name} (${(percent * 100).toFixed(0)}%)`}
-                      </text>
-                    ) : null;
-                  }}
-                  outerRadius={100}
-                  dataKey="value"
+                  outerRadius={120}
+                  label={({ name, percent }) =>
+                    `${name} ${(percent * 100).toFixed(0)}%`
+                  }
+                  labelLine={true}
                 >
                   {expensesByCategory.map((entry, index) => (
                     <Cell
@@ -243,6 +242,7 @@ const Analytics = () => {
                   contentStyle={{
                     backgroundColor: "#1F2937",
                     border: "1px solid #374151",
+                    borderRadius: "0.5rem",
                   }}
                 />
               </PieChart>
@@ -250,76 +250,40 @@ const Analytics = () => {
           </div>
         </div>
 
-        {/* Line Chart */}
+        {/* Income & Expenses Trend Line Chart */}
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 lg:col-span-2">
           <h3 className="text-lg font-medium text-white mb-4">
             Income & Expenses Trend
           </h3>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={summaryData?.comparison || []}
-                margin={{ top: 20, right: 30, left: 60, bottom: 20 }}
-              >
+              <LineChart data={incomeVsExpenses}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis
-                  dataKey="date"
+                  dataKey="period"
                   stroke="#9CA3AF"
                   tick={{ fill: "#9CA3AF" }}
-                  tickMargin={10}
                 />
                 <YAxis
                   stroke="#9CA3AF"
                   tick={{ fill: "#9CA3AF" }}
                   tickFormatter={(value) => `₱${value.toLocaleString()}`}
-                  width={80}
                 />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#1F2937",
-                    border: "1px solid #374151",
-                    borderRadius: "0.5rem",
-                    padding: "8px",
-                  }}
-                  formatter={(value) => [
-                    `₱${value.toLocaleString()}`,
-                    undefined,
-                  ]}
-                  labelStyle={{ color: "#9CA3AF" }}
-                />
-                <Legend
-                  wrapperStyle={{ paddingTop: "20px" }}
-                  formatter={(value) => (
-                    <span style={{ color: "#9CA3AF" }}>{value}</span>
-                  )}
-                />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
                 <Line
                   type="monotone"
                   dataKey="income"
-                  stroke="#3b82f6"
-                  name="Income"
+                  stroke="#10B981"
                   strokeWidth={2}
-                  dot={{ fill: "#3b82f6", strokeWidth: 2, r: 4 }}
+                  dot={{ fill: "#10B981" }}
                 />
                 <Line
                   type="monotone"
                   dataKey="expenses"
-                  stroke="#EF4444" // Red color for expenses
-                  name="Expenses"
+                  stroke="#EF4444"
                   strokeWidth={2}
-                  dot={{ fill: "#EF4444", strokeWidth: 2, r: 4 }}
-                  // Invert the Y axis for expenses to show downward trend
-                  yAxisId="expenses"
-                />
-                <YAxis
-                  yAxisId="expenses"
-                  orientation="right"
-                  stroke="#9CA3AF"
-                  tick={{ fill: "#9CA3AF" }}
-                  tickFormatter={(value) => `₱${value.toLocaleString()}`}
-                  width={80}
-                  // Invert the domain to make expenses go downward
-                  domain={["dataMax", "dataMin"]}
+                  dot={{ fill: "#EF4444" }}
                 />
               </LineChart>
             </ResponsiveContainer>
