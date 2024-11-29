@@ -13,12 +13,81 @@ const Register = () => {
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isChecking, setIsChecking] = useState({
+    username: false,
+    email: false,
+  });
+
+  // Debounce function to prevent too many API calls
+  const debounce = (func, wait) => {
+    let timeout;
+    return (...args) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), wait);
+    };
+  };
+
+  // Check availability of username/email
+  const checkAvailability = async (field, value) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/auth/check-availability`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            field,
+            value,
+          }),
+        }
+      );
+      const data = await response.json();
+      return data.available;
+    } catch (error) {
+      console.error(`Error checking ${field} availability:`, error);
+      return true; // Assume available in case of error
+    }
+  };
+
+  // Debounced check functions
+  const debouncedUsernameCheck = debounce(async (username) => {
+    if (username.length >= 3) {
+      setIsChecking((prev) => ({ ...prev, username: true }));
+      const isAvailable = await checkAvailability("username", username);
+      if (!isAvailable) {
+        setError("Username is already taken");
+      }
+      setIsChecking((prev) => ({ ...prev, username: false }));
+    }
+  }, 500);
+
+  const debouncedEmailCheck = debounce(async (email) => {
+    if (email.length > 0 && email.includes("@")) {
+      setIsChecking((prev) => ({ ...prev, email: true }));
+      const isAvailable = await checkAvailability("email", email);
+      if (!isAvailable) {
+        setError("Email is already registered");
+      }
+      setIsChecking((prev) => ({ ...prev, email: false }));
+    }
+  }, 500);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+    setError(""); // Clear previous errors
+
+    // Check availability while typing
+    if (name === "username") {
+      debouncedUsernameCheck(value);
+    } else if (name === "email") {
+      debouncedEmailCheck(value);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -122,16 +191,23 @@ const Register = () => {
               <label htmlFor="username" className="sr-only">
                 Username
               </label>
-              <input
-                id="username"
-                name="username"
-                type="text"
-                required
-                value={formData.username}
-                onChange={handleChange}
-                className="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-700 bg-gray-800 text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
-                placeholder="Username"
-              />
+              <div className="relative">
+                <input
+                  id="username"
+                  name="username"
+                  type="text"
+                  required
+                  value={formData.username}
+                  onChange={handleChange}
+                  className="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-700 bg-gray-800 text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
+                  placeholder="Username"
+                />
+                {isChecking.username && (
+                  <span className="absolute right-3 top-2 text-gray-400">
+                    Checking...
+                  </span>
+                )}
+              </div>
             </div>
             <div>
               <label htmlFor="email" className="sr-only">
@@ -191,6 +267,17 @@ const Register = () => {
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50"
             >
               {isLoading ? "Registering..." : "Register"}
+            </button>
+          </div>
+
+          <div className="text-center text-sm mt-4">
+            <span className="text-gray-400">Already have an account?</span>{" "}
+            <button
+              type="button"
+              onClick={() => navigate("/login")}
+              className="font-medium text-purple-500 hover:text-purple-400 focus:outline-none focus:underline transition ease-in-out duration-150"
+            >
+              Sign in
             </button>
           </div>
         </form>

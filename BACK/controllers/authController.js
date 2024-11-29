@@ -7,36 +7,31 @@ exports.register = async (req, res) => {
   try {
     const { first_name, last_name, username, email, password } = req.body;
 
-    // Check if email already exists
-    const [existingEmail] = await db.execute(
-      "SELECT user_id FROM users WHERE email = ?",
-      [email]
+    // Check if email or username already exists
+    const [existingUser] = await db.execute(
+      "SELECT user_id, email, username FROM users WHERE email = ? OR username = ?",
+      [email, username]
     );
 
-    if (existingEmail.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Email already registered",
-      });
+    if (existingUser.length > 0) {
+      // Specify which field is taken
+      if (existingUser[0].email === email) {
+        return res.status(400).json({
+          success: false,
+          message: "Email is already registered",
+        });
+      }
+      if (existingUser[0].username === username) {
+        return res.status(400).json({
+          success: false,
+          message: "Username is already taken",
+        });
+      }
     }
 
-    // Check if username already exists
-    const [existingUsername] = await db.execute(
-      "SELECT user_id FROM users WHERE username = ?",
-      [username]
-    );
-
-    if (existingUsername.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Username already taken",
-      });
-    }
-
-    // Hash password
+    // Hash password and create user
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert new user
     const [result] = await db.execute(
       "INSERT INTO users (first_name, last_name, username, email, password) VALUES (?, ?, ?, ?, ?)",
       [first_name, last_name, username, email, hashedPassword]
@@ -57,18 +52,26 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    console.log("Login attempt:", { email, password: "provided" });
+    const { identifier, password } = req.body;
 
-    // Find user by email
-    const [users] = await db.execute("SELECT * FROM users WHERE email = ?", [
-      email,
-    ]);
+    // Check if identifier is empty
+    if (!identifier || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide all required fields",
+      });
+    }
+
+    // Find user by email or username
+    const [users] = await db.execute(
+      "SELECT * FROM users WHERE email = ? OR username = ?",
+      [identifier, identifier]
+    );
 
     if (users.length === 0) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password",
+        message: "Invalid credentials",
       });
     }
 
@@ -80,20 +83,14 @@ exports.login = async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password",
+        message: "Invalid credentials",
       });
     }
 
     // Generate JWT token
-    const token = jwt.sign(
-      {
-        id: user.user_id,
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: "24h",
-      }
-    );
+    const token = jwt.sign({ id: user.user_id }, process.env.JWT_SECRET, {
+      expiresIn: "24h",
+    });
 
     // Send response
     res.json({
@@ -101,10 +98,10 @@ exports.login = async (req, res) => {
       token,
       user: {
         id: user.user_id,
+        username: user.username,
         email: user.email,
         firstName: user.first_name,
         lastName: user.last_name,
-        username: user.username,
       },
     });
   } catch (error) {
@@ -344,6 +341,35 @@ exports.getProfile = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error fetching profile",
+    });
+  }
+};
+
+exports.checkAvailability = async (req, res) => {
+  try {
+    const { field, value } = req.body;
+
+    if (!["username", "email"].includes(field)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid field",
+      });
+    }
+
+    const [existing] = await db.execute(
+      `SELECT user_id FROM users WHERE ${field} = ?`,
+      [value]
+    );
+
+    res.json({
+      success: true,
+      available: existing.length === 0,
+    });
+  } catch (error) {
+    console.error("Availability check error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error checking availability",
     });
   }
 };

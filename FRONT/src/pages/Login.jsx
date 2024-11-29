@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Link } from "react-router-dom";
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   const [formData, setFormData] = useState({
-    email: "",
+    identifier: "",
     password: "",
   });
   const [error, setError] = useState("");
@@ -32,7 +32,7 @@ const Login = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email: formData.email,
+          identifier: formData.identifier,
           password: formData.password,
         }),
       });
@@ -40,7 +40,6 @@ const Login = () => {
       const data = await response.json();
 
       if (response.ok && data.token) {
-        // Store the raw token without 'Bearer ' prefix
         localStorage.setItem("token", data.token);
         login(data.user);
         navigate("/dashboard");
@@ -62,22 +61,27 @@ const Login = () => {
           <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
             Sign in to your account
           </h2>
+          {location.state?.message && (
+            <div className="mt-2 text-center text-sm text-green-500">
+              {location.state.message}
+            </div>
+          )}
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm space-y-4">
             <div>
-              <label htmlFor="email" className="sr-only">
-                Email
+              <label htmlFor="identifier" className="sr-only">
+                Email or Username
               </label>
               <input
-                id="email"
-                name="email"
-                type="email"
+                id="identifier"
+                name="identifier"
+                type="text"
                 required
-                value={formData.email}
+                value={formData.identifier}
                 onChange={handleChange}
                 className="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-700 bg-gray-800 text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
-                placeholder="Email"
+                placeholder="Email or Username"
               />
             </div>
             <div>
@@ -110,17 +114,18 @@ const Login = () => {
               {isLoading ? "Signing in..." : "Sign in"}
             </button>
           </div>
-        </form>
 
-        <p className="mt-2 text-center text-sm text-gray-400">
-          Don't have an account?{" "}
-          <Link
-            to="/register"
-            className="font-medium text-purple-500 hover:text-purple-400"
-          >
-            Register here
-          </Link>
-        </p>
+          <div className="text-center text-sm">
+            <span className="text-gray-400">Don't have an account?</span>{" "}
+            <button
+              type="button"
+              onClick={() => navigate("/register")}
+              className="font-medium text-purple-500 hover:text-purple-400 focus:outline-none focus:underline transition ease-in-out duration-150"
+            >
+              Sign up
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
