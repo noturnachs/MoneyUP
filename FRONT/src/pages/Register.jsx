@@ -119,7 +119,10 @@ const Register = () => {
 
       if (response.ok) {
         navigate("/login", {
-          state: { message: "Registration successful! Please login." },
+          state: {
+            message:
+              "Registration successful! Please check your email to verify your account.",
+          },
         });
       } else {
         setError(data.message || "Registration failed");
@@ -293,6 +296,10 @@ const Register = () => {
                 placeholder="Confirm Password"
               />
             </div>
+          </div>
+
+          <div className="text-sm text-gray-400 text-center">
+            <p>By registering, you agree to our terms of service.</p>
           </div>
 
           <div>

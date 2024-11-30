@@ -18,6 +18,8 @@ import Profile from "./pages/Profile";
 import Income from "./pages/Income";
 import Settings from "./pages/Settings";
 import Goals from "./pages/Goals";
+import VerifyEmail from "./pages/VerifyEmail";
+import ResetPassword from "./pages/ResetPassword";
 
 // Import components
 import Navbar from "./components/layout/Navbar";
@@ -40,8 +42,17 @@ const AppLayout = ({ children }) => {
   const { isLoading } = useAuth();
 
   // List of routes where we don't want to show the sidebar/navbar
-  const publicRoutes = ["/", "/login", "/register"];
-  const isPublicRoute = publicRoutes.includes(location.pathname);
+  const publicRoutes = [
+    "/",
+    "/login",
+    "/register",
+    "/verify-email",
+    "/reset-password",
+  ];
+  const isPublicRoute =
+    publicRoutes.includes(location.pathname) ||
+    location.pathname.startsWith("/verify-email") ||
+    location.pathname.startsWith("/reset-password");
 
   // Show loading spinner while auth is being checked
   if (isLoading) {
@@ -114,6 +125,22 @@ function App() {
             element={
               <PublicRoute>
                 <Register />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/verify-email"
+            element={
+              <PublicRoute>
+                <VerifyEmail />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/reset-password"
+            element={
+              <PublicRoute>
+                <ResetPassword />
               </PublicRoute>
             }
           />

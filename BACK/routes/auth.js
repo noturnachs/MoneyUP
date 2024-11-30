@@ -18,4 +18,9 @@ router.post("/check-availability", authController.checkAvailability);
 router.post("/threshold", authMiddleware, authController.updateThreshold);
 router.get("/threshold", authMiddleware, authController.getThreshold);
 
+// Add these new routes
+router.get("/verify-email", authController.verifyEmail);
+router.post("/forgot-password", authController.forgotPassword);
+router.post("/reset-password", authController.resetPassword);
+
 module.exports = router;

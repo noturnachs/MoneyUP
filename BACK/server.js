@@ -3,6 +3,7 @@ const cors = require("cors");
 require("dotenv").config();
 const db = require("./config/database");
 const errorHandler = require("./middleware/errorHandler");
+const { testEmailConnection } = require("./utils/emailService");
 
 const app = express();
 
@@ -22,6 +23,15 @@ const testConnection = async () => {
 };
 
 testConnection();
+
+// Add this after your other startup code
+testEmailConnection().then((isConnected) => {
+  if (isConnected) {
+    console.log("✉️ Email service connected successfully");
+  } else {
+    console.error("❌ Failed to connect to email service");
+  }
+});
 
 // Routes
 app.use("/api/auth", require("./routes/auth"));

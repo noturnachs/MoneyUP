@@ -2,9 +2,18 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const db = require("../config/database");
 const bcrypt = require("bcrypt");
+const crypto = require("crypto");
+const {
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+} = require("../utils/emailService");
 
 exports.register = async (req, res) => {
+  const client = await db.getConnection();
+
   try {
+    await client.query("BEGIN");
+
     const {
       email,
       password,
@@ -54,14 +63,18 @@ exports.register = async (req, res) => {
       });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const tokenExpires = new Date();
+    tokenExpires.setHours(tokenExpires.getHours() + 24);
 
+    const hashedPassword = await bcrypt.hash(password, 10);
     const {
       rows: [newUser],
-    } = await db.execute(
+    } = await client.query(
       `INSERT INTO users 
-       (email, password, username, first_name, last_name, name) 
-       VALUES ($1, $2, $3, $4, $5, $6) 
+       (email, password, username, first_name, last_name, name, verification_token, verification_token_expires) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
        RETURNING user_id, email, username, first_name, last_name, name`,
       [
         email,
@@ -70,19 +83,20 @@ exports.register = async (req, res) => {
         finalFirstName,
         finalLastName,
         `${finalFirstName} ${finalLastName}`,
+        verificationToken,
+        tokenExpires,
       ]
     );
 
-    const token = jwt.sign(
-      { userId: newUser.user_id },
-      process.env.JWT_SECRET,
-      { expiresIn: "24h" }
-    );
+    await client.query("COMMIT");
+
+    // Send verification email
+    await sendVerificationEmail(email, verificationToken);
 
     res.status(201).json({
       success: true,
-      message: "User registered successfully",
-      token,
+      message:
+        "Registration successful. Please check your email to verify your account.",
       user: {
         id: newUser.user_id,
         email: newUser.email,
@@ -93,12 +107,15 @@ exports.register = async (req, res) => {
       },
     });
   } catch (error) {
+    await client.query("ROLLBACK");
     console.error("Registration error:", error);
     res.status(500).json({
       success: false,
       message: "Error registering user",
       error: error.message,
     });
+  } finally {
+    client.release();
   }
 };
 
@@ -133,6 +150,14 @@ exports.login = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: "Invalid credentials",
+      });
+    }
+
+    // Add email verification check
+    if (!user.email_verified) {
+      return res.status(401).json({
+        success: false,
+        message: "Please verify your email before logging in",
       });
     }
 
@@ -552,6 +577,118 @@ exports.getThreshold = async (req, res) => {
       success: false,
       message: "Error retrieving threshold",
       error: error.message,
+    });
+  }
+};
+
+exports.verifyEmail = async (req, res) => {
+  const { token } = req.query;
+
+  try {
+    const { rows } = await db.execute(
+      `UPDATE users 
+       SET email_verified = TRUE, 
+           verification_token = NULL, 
+           verification_token_expires = NULL 
+       WHERE verification_token = $1 
+       AND verification_token_expires > NOW() 
+       RETURNING user_id`,
+      [token]
+    );
+
+    if (rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired verification token",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Email verified successfully",
+    });
+  } catch (error) {
+    console.error("Email verification error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error verifying email",
+    });
+  }
+};
+
+exports.forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const tokenExpires = new Date();
+    tokenExpires.setHours(tokenExpires.getHours() + 1);
+
+    const { rows } = await db.execute(
+      `UPDATE users 
+       SET reset_password_token = $1, 
+           reset_password_expires = $2 
+       WHERE email = $3 
+       AND account_status = 'active' 
+       RETURNING user_id`,
+      [resetToken, tokenExpires, email]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No account found with this email address",
+      });
+    }
+
+    await sendPasswordResetEmail(email, resetToken);
+
+    res.json({
+      success: true,
+      message: "Password reset instructions sent to your email",
+    });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error processing password reset request",
+    });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  const { token, password } = req.body;
+
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const { rows } = await db.execute(
+      `UPDATE users 
+       SET password = $1, 
+           reset_password_token = NULL, 
+           reset_password_expires = NULL 
+       WHERE reset_password_token = $2 
+       AND reset_password_expires > NOW() 
+       RETURNING user_id`,
+      [hashedPassword, token]
+    );
+
+    if (rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired reset token",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Password reset successful",
+    });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error resetting password",
     });
   }
 };
