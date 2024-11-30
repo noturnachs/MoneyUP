@@ -38,6 +38,11 @@ const Analytics = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [incomeVsExpenses, setIncomeVsExpenses] = useState([]);
   const [isVisible, setIsVisible] = useState(false);
+  const [spendingInsights, setSpendingInsights] = useState({
+    monthlyComparison: [],
+    categoryInsights: [],
+    unusualSpending: [],
+  });
 
   const COLORS = [
     "#8b5cf6", // purple-500
@@ -111,6 +116,18 @@ const Analytics = () => {
       );
       const trendData = await trendResponse.json();
       setIncomeVsExpenses(trendData.data || []);
+
+      // Fetch spending insights
+      const insightsResponse = await fetch(
+        `http://localhost:5000/api/analytics/insights`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      const insightsData = await insightsResponse.json();
+      setSpendingInsights(insightsData);
     } catch (error) {
       console.error("Error fetching analytics data:", error);
     } finally {
@@ -279,6 +296,147 @@ const Analytics = () => {
           <p className="text-2xl font-bold text-white mt-2">
             {summaryData.savingsRate.toFixed(1)}%
           </p>
+        </div>
+      </div>
+
+      {/* Spending Insights */}
+      <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
+        <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 text-purple-500"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+              clipRule="evenodd"
+            />
+          </svg>
+          Spending Insights
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Monthly Comparison */}
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="text-gray-400 text-sm font-medium mb-3">
+              Monthly Comparison
+            </h4>
+            <div className="space-y-2">
+              {spendingInsights.monthlyComparison?.length > 0 ? (
+                spendingInsights.monthlyComparison.map((insight, index) => (
+                  <div
+                    key={index}
+                    className={`flex items-start gap-2 ${
+                      insight.type === "increase"
+                        ? "text-red-400"
+                        : "text-green-400"
+                    }`}
+                  >
+                    {insight.type === "increase" ? (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    ) : (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 012 0v7.586l2.293-2.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    )}
+                    <span className="text-sm">{insight.message}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-gray-500 text-sm">
+                  Monthly comparison unavailable
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Category Insights */}
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="text-gray-400 text-sm font-medium mb-3">
+              Category Analysis
+            </h4>
+            <div className="space-y-2">
+              {spendingInsights.categoryInsights?.length > 0 ? (
+                spendingInsights.categoryInsights.map((insight, index) => (
+                  <div key={index} className="text-sm text-gray-300">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`w-2 h-2 rounded-full ${
+                          insight.status === "high"
+                            ? "bg-red-400"
+                            : insight.status === "low"
+                            ? "bg-green-400"
+                            : "bg-yellow-400"
+                        }`}
+                      ></span>
+                      {insight.message}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-gray-500 text-sm">
+                  Category analysis unavailable
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Unusual Spending */}
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="text-gray-400 text-sm font-medium mb-3">
+              Unusual Spending
+            </h4>
+            <div className="space-y-2">
+              {spendingInsights.unusualSpending?.length > 0 ? (
+                spendingInsights.unusualSpending.map((insight, index) => (
+                  <div
+                    key={index}
+                    className="flex items-start gap-2 text-yellow-400"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span className="text-sm">{insight.message}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-gray-500 text-sm">
+                  No unusual spending detected
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
