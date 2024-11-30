@@ -537,99 +537,11 @@ const Dashboard = () => {
       }`}
     >
       {/* Overview Cards */}
-      {/* Threshold Alert */}
-      {showThresholdAlert && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`${
-            balanceData.currentBalance < threshold
-              ? "bg-red-900/50 border-red-500/50"
-              : "bg-yellow-900/50 border-yellow-500/50"
-          } border rounded-lg p-4 flex items-center justify-between`}
-        >
-          <div className="flex items-center space-x-3">
-            <svg
-              className={`h-5 w-5 ${
-                balanceData.currentBalance < threshold
-                  ? "text-red-500"
-                  : "text-yellow-500"
-              } animate-pulse`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            <div>
-              <p
-                className={`${
-                  balanceData.currentBalance < threshold
-                    ? "text-red-500"
-                    : "text-yellow-500"
-                } font-medium`}
-              >
-                {balanceData.currentBalance < threshold
-                  ? "Low Balance Warning"
-                  : "Low Balance Alert"}
-              </p>
-              <p
-                className={`${
-                  balanceData.currentBalance < threshold
-                    ? "text-red-500/80"
-                    : "text-yellow-500/80"
-                } text-sm`}
-              >
-                {balanceData.currentBalance < threshold
-                  ? `Your balance is below your minimum threshold of ₱${parseFloat(
-                      threshold
-                    ).toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}`
-                  : `Your balance is getting close to your minimum threshold of ₱${parseFloat(
-                      threshold
-                    ).toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}`}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setShowThresholdAlert(false)}
-            className={`${
-              balanceData.currentBalance < threshold
-                ? "text-red-500/80 hover:text-red-500"
-                : "text-yellow-500/80 hover:text-yellow-500"
-            } transition-colors`}
-          >
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </motion.div>
-      )}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+        <div className="bg-gray-800 p-4 sm:p-6 rounded-xl border border-gray-700">
           <h3 className="text-gray-400 text-sm font-medium">Net Savings</h3>
           <div className="mt-2 space-y-1">
-            <p className="text-2xl font-bold text-green-500">
+            <p className="text-xl sm:text-2xl font-bold text-green-500">
               ₱
               {(balanceData?.totalBalance || 0).toLocaleString("en-US", {
                 minimumFractionDigits: 2,
@@ -650,11 +562,11 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
+        <div className="bg-gray-800 p-4 sm:p-6 rounded-xl border border-gray-700">
           <h3 className="text-gray-400 text-sm font-medium">Current Balance</h3>
           <div className="mt-2 space-y-1">
             <p
-              className={`text-2xl font-bold ${
+              className={`text-xl sm:text-2xl font-bold ${
                 threshold && balanceData?.currentBalance
                   ? balanceData.currentBalance <= parseFloat(threshold) * 1.1 &&
                     balanceData.currentBalance > parseFloat(threshold)
@@ -706,10 +618,10 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
+        <div className="bg-gray-800 p-4 sm:p-6 rounded-xl border border-gray-700">
           <h3 className="text-gray-400 text-sm font-medium">Total Expenses</h3>
           <div className="mt-2 space-y-1">
-            <p className="text-2xl font-bold text-red-500">
+            <p className="text-xl sm:text-2xl font-bold text-red-500">
               ₱
               {(balanceData?.monthlyExpenses || 0).toLocaleString("en-US", {
                 minimumFractionDigits: 2,
@@ -736,8 +648,8 @@ const Dashboard = () => {
       </div>
 
       {/* Goal Progress Card */}
-      <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
-        <div className="flex justify-between items-start mb-4">
+      <div className="bg-gray-800 p-4 sm:p-6 rounded-xl border border-gray-700">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 space-y-2 sm:space-y-0">
           <h3 className="text-gray-400 text-sm font-medium">Savings Goal</h3>
           <Link
             to="/goals"
@@ -839,14 +751,14 @@ const Dashboard = () => {
 
       {/* Recent Updates Section */}
       <div className="bg-gray-800 rounded-xl border border-gray-700 mt-6">
-        <div className="p-6 border-b border-gray-700">
-          <div className="flex justify-between items-center">
+        <div className="p-4 sm:p-6 border-b border-gray-700">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0">
             <h3 className="text-lg font-medium text-white">Recent Updates</h3>
-            <div className="flex space-x-4">
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                className="bg-gray-700 border-gray-600 text-white rounded-md text-sm px-3 py-1"
+                className="bg-gray-700 border-gray-600 text-white rounded-md text-sm px-3 py-1 w-full sm:w-auto"
               >
                 <option value="all">All Transactions</option>
                 <option value="income">Income Only</option>
@@ -856,7 +768,7 @@ const Dashboard = () => {
               <select
                 value={sortOrder}
                 onChange={(e) => setSortOrder(e.target.value)}
-                className="bg-gray-700 border-gray-600 text-white rounded-md text-sm px-3 py-1"
+                className="bg-gray-700 border-gray-600 text-white rounded-md text-sm px-3 py-1 w-full sm:w-auto"
               >
                 <option value="latest">Latest First</option>
                 <option value="oldest">Oldest First</option>
@@ -864,15 +776,20 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+
+        {/* Transactions Table */}
         <div className="overflow-x-auto max-h-[400px] scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800">
           <table className="w-full">
             <thead className="sticky top-0 bg-gray-800 z-10">
               <tr className="text-left text-gray-400 text-sm">
-                <th className="p-4">Type</th>
-                <th className="p-4">Amount</th>
-                <th className="p-4 hidden md:table-cell">Description</th>
-                <th className="p-4 hidden md:table-cell">Category</th>
-                <th className="p-4">Date</th>
+                <th className="p-3 sm:p-4">Type</th>
+                <th className="p-3 sm:p-4">Amount</th>
+                <th className="hidden sm:table-cell p-4">Description</th>
+                <th className="hidden sm:table-cell p-4">Category</th>
+                <th className="p-3 sm:p-4">
+                  <span className="hidden sm:inline">Date</span>
+                  <span className="sm:hidden">Date/Time</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
@@ -886,7 +803,7 @@ const Dashboard = () => {
                     key={transaction.id}
                     className="text-gray-300 hover:bg-gray-700/50"
                   >
-                    <td className="p-4">
+                    <td className="p-3 sm:p-4">
                       <span
                         className={`px-2 py-1 rounded-full text-xs ${
                           transaction.type === "income"
@@ -897,7 +814,7 @@ const Dashboard = () => {
                         {transaction.type}
                       </span>
                     </td>
-                    <td className="p-4">
+                    <td className="p-3 sm:p-4">
                       <span
                         className={
                           transaction.type === "income"
@@ -915,45 +832,36 @@ const Dashboard = () => {
                         )}
                       </span>
                     </td>
-                    <td className="p-4 hidden md:table-cell">
+                    <td className="hidden sm:table-cell p-4">
                       {transaction.description}
                     </td>
-                    <td className="p-4 hidden md:table-cell">
+                    <td className="hidden sm:table-cell p-4">
                       {transaction.category_name || "-"}
                     </td>
-                    <td className="p-4">
-                      {new Date(transaction.created_at).toLocaleDateString()}
-                      <span className="text-gray-500 text-sm ml-2">
-                        {new Date(transaction.created_at).toLocaleTimeString(
-                          [],
-                          {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: true,
-                          }
-                        )}
-                      </span>
+                    <td className="p-3 sm:p-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center">
+                        <span>
+                          {new Date(
+                            transaction.created_at
+                          ).toLocaleDateString()}
+                        </span>
+                        <span className="text-gray-500 text-xs sm:text-sm sm:ml-2">
+                          {new Date(transaction.created_at).toLocaleTimeString(
+                            [],
+                            {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: true,
+                            }
+                          )}
+                        </span>
+                      </div>
                     </td>
                   </tr>
                 ))}
-              {getFilteredTransactions().length === 0 && (
-                <tr>
-                  <td colSpan="5" className="p-4 text-center text-gray-500">
-                    No recent transactions
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
-        {getFilteredTransactions().length > 0 && (
-          <Pagination
-            totalItems={getFilteredTransactions().length}
-            itemsPerPage={transactionsPerPage}
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-          />
-        )}
       </div>
     </div>
   );

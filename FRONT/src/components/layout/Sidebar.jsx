@@ -14,7 +14,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 
-const Sidebar = ({ isOpen }) => {
+const Sidebar = ({ isOpen, onClose }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { logout } = useAuth();
   const location = useLocation();
@@ -67,32 +67,64 @@ const Sidebar = ({ isOpen }) => {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <div
-      className={`${isOpen ? "translate-x-0" : "-translate-x-full"} 
-      fixed inset-y-0 left-0 transform transition-all duration-300 ease-in-out 
-      ${isCollapsed ? "w-20" : "w-64"} bg-gray-800 border-r border-gray-700 
-      z-30 md:relative md:translate-x-0 h-[calc(100vh-64px)] relative`}
-    >
-      <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-1/2 -translate-y-1/2 bg-gray-800 text-gray-400 
-        hover:text-white p-1 rounded-full border border-gray-700 
-        hover:border-gray-600 focus:outline-none"
-      >
-        {isCollapsed ? (
-          <ChevronRightIcon className="h-4 w-4" />
-        ) : (
-          <ChevronLeftIcon className="h-4 w-4" />
-        )}
-      </button>
+    <>
+      {/* Overlay for mobile */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
+          onClick={onClose}
+        />
+      )}
 
-      <div className="flex flex-col h-full">
-        <div className="flex-1 p-4">
-          <nav className="space-y-2">
+      <div
+        className={`${isOpen ? "translate-x-0" : "-translate-x-full"} 
+        fixed inset-y-0 left-0 transform transition-all duration-300 ease-in-out 
+        ${isCollapsed ? "w-20" : "w-64"} bg-gray-800 border-r border-gray-700 
+        z-30 md:relative md:translate-x-0 h-screen md:h-[calc(100vh-64px)]
+        flex flex-col`}
+      >
+        {/* Mobile Header */}
+        <div className="md:hidden flex items-center justify-between p-4 border-b border-gray-700">
+          <span className="text-white font-medium">Menu</span>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        {/* Collapse Button - Hidden on Mobile */}
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="absolute -right-3 top-1/2 -translate-y-1/2 bg-gray-800 text-gray-400 
+          hover:text-white p-1 rounded-full border border-gray-700 
+          hover:border-gray-600 focus:outline-none hidden md:block"
+        >
+          {isCollapsed ? (
+            <ChevronRightIcon className="h-4 w-4" />
+          ) : (
+            <ChevronLeftIcon className="h-4 w-4" />
+          )}
+        </button>
+
+        <div className="flex-1 overflow-y-auto">
+          <nav className="p-4 space-y-2">
             {menuItems.map((item) => (
               <Link
                 key={item.name}
                 to={item.path}
+                onClick={onClose} // Close sidebar on mobile when clicking a link
                 className={`flex items-center ${
                   isCollapsed ? "justify-center" : "px-4"
                 } py-3 text-gray-300 rounded-lg transition-colors group relative
@@ -110,11 +142,14 @@ const Sidebar = ({ isOpen }) => {
                       : "text-gray-400 group-hover:text-white"
                   }`}
                 />
-                {!isCollapsed && <span>{item.name}</span>}
+                {(!isCollapsed || isOpen) && <span>{item.name}</span>}
 
-                {/* Tooltip for collapsed state */}
-                {isCollapsed && (
-                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                {/* Tooltip - Only show on desktop when collapsed */}
+                {isCollapsed && !isOpen && (
+                  <div
+                    className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded-md 
+                    opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 hidden md:block"
+                  >
                     {item.name}
                     <div className="text-xs text-gray-400">
                       {item.description}
@@ -129,7 +164,10 @@ const Sidebar = ({ isOpen }) => {
         {/* Logout button at bottom */}
         <div className="p-4 border-t border-gray-700">
           <button
-            onClick={logout}
+            onClick={() => {
+              onClose(); // Close sidebar first
+              logout(); // Then logout
+            }}
             className={`flex items-center ${
               isCollapsed ? "justify-center" : "px-4"
             } py-3 text-gray-300 hover:bg-gray-700 rounded-lg transition-colors w-full group relative`}
@@ -140,11 +178,14 @@ const Sidebar = ({ isOpen }) => {
                 !isCollapsed && "mr-3"
               } text-gray-400 group-hover:text-white`}
             />
-            {!isCollapsed && <span>Logout</span>}
+            {(!isCollapsed || isOpen) && <span>Logout</span>}
 
-            {/* Tooltip for collapsed state */}
-            {isCollapsed && (
-              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+            {/* Tooltip - Only show on desktop when collapsed */}
+            {isCollapsed && !isOpen && (
+              <div
+                className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded-md 
+                opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 hidden md:block"
+              >
                 Logout
                 <div className="text-xs text-gray-400">
                   Sign out of your account
@@ -154,7 +195,7 @@ const Sidebar = ({ isOpen }) => {
           </button>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

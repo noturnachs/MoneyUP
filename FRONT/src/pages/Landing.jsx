@@ -11,6 +11,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, useAnimation, useScroll, useInView } from "framer-motion";
 import Pricing from "./Pricing";
 import showcaseImage from "../components/images/showcase.png";
+import showcase2Image from "../components/images/showcase2.png";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -94,18 +95,27 @@ const Landing = () => {
   const featuresRef = useRef(null);
   const pricingRef = useRef(null);
   const ctaRef = useRef(null);
+  const analyticsRef = useRef(null);
 
   // Animation controls
   const heroControls = useAnimation();
   const featuresControls = useAnimation();
   const pricingControls = useAnimation();
   const ctaControls = useAnimation();
+  const analyticsControls = useAnimation();
 
   // Check if sections are in view
   const heroInView = useInView(heroRef, { margin: "-100px" });
-  const featuresInView = useInView(featuresRef, { margin: "-100px" });
+  const featuresInView = useInView(featuresRef, {
+    margin: "-100px 0px",
+    amount: 0.1,
+  });
   const pricingInView = useInView(pricingRef, { margin: "-100px" });
   const ctaInView = useInView(ctaRef, { margin: "-100px" });
+  const analyticsInView = useInView(analyticsRef, {
+    margin: "-100px 0px",
+    amount: 0.3,
+  });
 
   // Animation variants
   const containerVariants = {
@@ -171,6 +181,14 @@ const Landing = () => {
       ctaControls.start("hidden");
     }
   }, [ctaInView, ctaControls]);
+
+  useEffect(() => {
+    if (analyticsInView) {
+      analyticsControls.start("visible");
+    } else {
+      analyticsControls.start("hidden");
+    }
+  }, [analyticsInView, analyticsControls]);
 
   // Add these chart configurations inside the Landing component
   const chartData = {
@@ -290,86 +308,193 @@ const Landing = () => {
         initial="hidden"
         animate={heroControls}
         variants={containerVariants}
-        className="relative overflow-hidden py-16 sm:py-24"
+        className="relative min-h-[80vh] flex items-start bg-gray-900 pt-24 px-4 sm:px-6 lg:px-8"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="lg:grid lg:grid-cols-12 lg:gap-12">
+        <div className="max-w-7xl mx-auto w-full mt-8">
+          <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-8">
             {/* Text Content */}
             <motion.div
               variants={itemVariants}
-              className="sm:text-center md:max-w-2xl md:mx-auto lg:col-span-5 lg:text-left"
+              className="text-center lg:text-left lg:col-span-6 mb-12 lg:mb-0"
             >
-              <h1 className="text-4xl tracking-tight font-extrabold text-white sm:text-5xl md:text-6xl">
-                <motion.span variants={itemVariants} className="block">
-                  Take Control of
-                </motion.span>
-                <motion.span variants={itemVariants} className="block">
-                  Your
-                </motion.span>
-                <motion.span
+              <div>
+                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl tracking-tight font-extrabold text-white">
+                  <motion.span variants={itemVariants} className="block">
+                    Take Control of
+                  </motion.span>
+                  <motion.span variants={itemVariants} className="block">
+                    Your
+                  </motion.span>
+                  <motion.span
+                    variants={itemVariants}
+                    className="block text-purple-500"
+                  >
+                    Financial Future
+                  </motion.span>
+                </h1>
+                <motion.p
                   variants={itemVariants}
-                  className="block text-purple-500"
+                  className="mt-3 text-base sm:text-lg text-gray-300 md:mt-5 md:text-xl px-4 lg:px-0"
                 >
-                  Financial Future
-                </motion.span>
-              </h1>
-              <motion.p
-                variants={itemVariants}
-                className="mt-3 text-base text-gray-300 sm:text-lg md:mt-5 md:text-xl"
-              >
-                Track expenses, manage budgets, and achieve your financial goals
-                with our easy-to-use personal finance management tool.
-              </motion.p>
-              <motion.div variants={itemVariants} className="mt-10">
-                <Link
-                  to="/register"
-                  className="px-8 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-purple-600 hover:bg-purple-700 md:text-lg transition-colors"
-                >
-                  Start Free Today
-                </Link>
-              </motion.div>
+                  Track expenses, manage budgets, and achieve your financial
+                  goals with our easy-to-use personal finance management tool.
+                </motion.p>
+                <motion.div variants={itemVariants} className="mt-5 sm:mt-8">
+                  <Link
+                    to="/register"
+                    className="px-8 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-purple-600 hover:bg-purple-700 md:text-lg transition-colors"
+                  >
+                    Start Free Today
+                  </Link>
+                </motion.div>
+              </div>
             </motion.div>
 
-            {/* Image */}
+            {/* Images */}
             <motion.div
               variants={itemVariants}
-              className="mt-12 relative lg:mt-0 lg:col-span-7"
+              className="relative lg:col-span-6"
             >
-              <div className="relative mx-auto rounded-lg shadow-xl lg:max-w-none">
+              <div className="relative mx-auto w-full">
+                {/* First Image */}
                 <motion.div
-                  className="relative block w-full rounded-lg overflow-hidden"
+                  className="relative block w-full rounded-lg overflow-hidden transform transition-all duration-300 hover:scale-105"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3, duration: 0.5 }}
+                  whileHover={{
+                    scale: 1.05,
+                    rotate: 1,
+                    transition: {
+                      duration: 0.4,
+                      ease: "easeOut",
+                    },
+                  }}
                 >
+                  <div className="absolute inset-0 bg-purple-500/10 opacity-0 hover:opacity-100 transition-opacity duration-300 rounded-lg" />
                   <img
-                    className="w-full h-auto object-cover rounded-lg transform hover:scale-105 transition-transform duration-300"
+                    className="w-full rounded-lg transition-transform duration-300"
                     src={showcaseImage}
                     alt="Dashboard Preview"
                     style={{
-                      boxShadow: "0 0 40px rgba(139, 92, 246, 0.15)", // Purple glow
-                      border: "1px solid rgba(139, 92, 246, 0.2)", // Subtle purple border
+                      boxShadow: "0 0 40px rgba(139, 92, 246, 0.15)",
+                      border: "1px solid rgba(139, 92, 246, 0.2)",
                     }}
                   />
-                  {/* Optional Floating Elements */}
-                  <div className="absolute inset-0 bg-gradient-to-tr from-purple-500/10 to-transparent pointer-events-none"></div>
+                  <div className="absolute inset-0 ring-1 ring-purple-500/20 rounded-lg pointer-events-none" />
+                </motion.div>
+
+                {/* Second Image */}
+                <motion.div
+                  className="absolute -bottom-12 -right-12 w-4/5 rounded-lg overflow-hidden hidden sm:block"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.5, duration: 0.5 }}
+                  whileHover={{
+                    scale: 1.05,
+                    rotate: -1,
+                    transition: {
+                      duration: 0.4,
+                      ease: "easeOut",
+                    },
+                  }}
+                >
+                  <div className="absolute inset-0 bg-purple-500/10 opacity-0 hover:opacity-100 transition-opacity duration-300 rounded-lg" />
+                  <img
+                    className="w-full rounded-lg transition-transform duration-300"
+                    src={showcase2Image}
+                    alt="Dashboard Features Preview"
+                    style={{
+                      boxShadow: "0 0 40px rgba(139, 92, 246, 0.2)",
+                      border: "1px solid rgba(139, 92, 246, 0.2)",
+                    }}
+                  />
+                  <div className="absolute inset-0 ring-1 ring-purple-500/20 rounded-lg pointer-events-none" />
                 </motion.div>
               </div>
             </motion.div>
           </div>
         </div>
+
+        {/* Scroll Indicator */}
+        <motion.div
+          className="absolute bottom-4 left-0 right-0 mx-auto flex flex-col items-center justify-center text-gray-400 cursor-pointer w-full max-w-[100px]"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{
+            opacity: 1,
+            y: 0,
+            transition: {
+              duration: 0.6,
+              delay: 1,
+            },
+          }}
+          whileHover={{ scale: 1.1 }}
+          onClick={() => {
+            const chartsSection = document.getElementById("charts-section");
+            if (chartsSection) {
+              chartsSection.scrollIntoView({ behavior: "smooth" });
+            }
+          }}
+        >
+          <span className="text-sm mb-1 text-center">Scroll Down</span>
+          <motion.div
+            className="flex justify-center"
+            animate={{
+              y: [0, 8, 0],
+            }}
+            transition={{
+              duration: 1,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 14l-7 7m0 0l-7-7m7 7V3"
+              />
+            </svg>
+          </motion.div>
+        </motion.div>
       </motion.div>
 
       {/* Charts Section */}
       <motion.div
+        ref={analyticsRef}
+        id="charts-section"
         initial="hidden"
-        animate={featuresControls}
-        variants={containerVariants}
-        className="bg-gray-900 py-16"
+        animate={analyticsControls}
+        variants={{
+          hidden: {
+            opacity: 0,
+            y: 50,
+          },
+          visible: {
+            opacity: 1,
+            y: 0,
+            transition: {
+              duration: 0.6,
+              ease: "easeOut",
+              staggerChildren: 0.2,
+            },
+          },
+        }}
+        className="bg-gray-900 py-8 sm:py-16 px-4 sm:px-6 lg:px-8 relative"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div variants={itemVariants} className="text-center mb-12">
-            <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            variants={itemVariants}
+            className="text-center mb-8 sm:mb-12"
+          >
+            <h2 className="text-2xl font-extrabold text-white sm:text-4xl px-4">
               Powerful Analytics at Your Fingertips
             </h2>
             <p className="mt-4 text-lg text-gray-400">
@@ -377,7 +502,7 @@ const Landing = () => {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 gap-8">
             {/* Expenses Trend Chart */}
             <motion.div
               variants={itemVariants}
@@ -425,11 +550,11 @@ const Landing = () => {
         initial="hidden"
         animate={featuresControls}
         variants={containerVariants}
-        className="bg-gray-800"
+        className="bg-gray-800 px-4 sm:px-6 lg:px-8"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="max-w-7xl mx-auto py-8 sm:py-16">
           <motion.div variants={itemVariants} className="text-center">
-            <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white sm:text-4xl px-4">
               Everything you need to manage your money
             </h2>
             <p className="mt-4 text-lg text-gray-400">
@@ -438,8 +563,8 @@ const Landing = () => {
             </p>
           </motion.div>
 
-          <div className="mt-20">
-            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-12 sm:mt-20">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
               {features.map((feature, index) => (
                 <motion.div
                   key={feature.title}
@@ -523,16 +648,16 @@ const Landing = () => {
         initial="hidden"
         animate={ctaControls}
         variants={containerVariants}
-        className="bg-gray-900"
+        className="bg-gray-900 px-4 sm:px-6 lg:px-8"
       >
-        <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto py-8 sm:py-12">
           <motion.div
             variants={itemVariants}
             className="bg-purple-600 rounded-lg shadow-xl overflow-hidden"
           >
-            <div className="px-6 py-12 sm:px-12 sm:py-16 lg:flex lg:items-center lg:justify-between">
-              <div>
-                <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
+            <div className="px-4 py-8 sm:px-12 sm:py-16 space-y-6 sm:space-y-0 lg:flex lg:items-center lg:justify-between">
+              <div className="text-center lg:text-left">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-white sm:text-4xl">
                   {user ? (
                     <span className="block">Welcome back!</span>
                   ) : (
@@ -545,7 +670,7 @@ const Landing = () => {
                   </span>
                 </h2>
               </div>
-              <div className="mt-8 flex lg:mt-0 lg:flex-shrink-0">
+              <div className="flex justify-center lg:mt-0 lg:flex-shrink-0">
                 <div className="inline-flex rounded-md shadow">
                   <Link
                     to={user ? "/dashboard" : "/register"}
@@ -561,17 +686,23 @@ const Landing = () => {
       </motion.div>
 
       {/* Footer */}
-      <footer className="bg-gray-900">
-        <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-          <div className="border-t border-gray-800 pt-8 flex justify-between items-center">
-            <p className="text-base text-gray-400">
+      <footer className="bg-gray-900 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto py-8 sm:py-12">
+          <div className="border-t border-gray-800 pt-8 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+            <p className="text-sm sm:text-base text-gray-400 text-center sm:text-left">
               &copy; 2024 MoneyUp. All rights reserved.
             </p>
             <div className="flex space-x-6">
-              <a href="/" className="text-gray-400 hover:text-gray-300">
+              <a
+                href="/"
+                className="text-sm sm:text-base text-gray-400 hover:text-gray-300"
+              >
                 Privacy
               </a>
-              <a href="/" className="text-gray-400 hover:text-gray-300">
+              <a
+                href="/"
+                className="text-sm sm:text-base text-gray-400 hover:text-gray-300"
+              >
                 Terms
               </a>
             </div>
