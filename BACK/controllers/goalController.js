@@ -133,10 +133,11 @@ class GoalController {
 
       const { amount } = req.body;
 
-      // Mark goal as completed
+      // Mark goal as completed with completion date
       const [result] = await conn.execute(
         `UPDATE goals 
-         SET is_completed = true 
+         SET is_completed = true,
+             date_completed = CURRENT_DATE()
          WHERE goal_id = ? AND user_id = ?`,
         [req.params.id, req.user.id]
       );

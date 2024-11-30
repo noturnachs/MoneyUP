@@ -375,6 +375,11 @@ const Goals = () => {
                         />
                       </svg>
                       Goal Accomplished!
+                      {goal.date_completed && (
+                        <span className="ml-2 text-gray-400">
+                          (Completed: {formatDate(goal.date_completed)})
+                        </span>
+                      )}
                     </p>
                   </div>
                 )}

@@ -71,6 +71,22 @@ class Goal {
       throw error;
     }
   }
+
+  static async markAccomplished(goalId, userId) {
+    try {
+      const [result] = await db.execute(
+        `UPDATE goals 
+         SET is_completed = true, 
+             date_completed = CURRENT_DATE()
+         WHERE goal_id = ? AND user_id = ?`,
+        [goalId, userId]
+      );
+      return result.affectedRows > 0;
+    } catch (error) {
+      console.error("Error marking goal as accomplished:", error);
+      throw error;
+    }
+  }
 }
 
 module.exports = Goal;
