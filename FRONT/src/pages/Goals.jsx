@@ -316,14 +316,20 @@ const Goals = () => {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {goals.map((goal) => {
-            const progress = Math.min(
-              Math.round(
-                (balanceData.currentBalance / parseFloat(goal.amount)) * 100
-              ) || 0,
-              100
-            );
-            const isGoalReached =
-              balanceData.currentBalance >= parseFloat(goal.amount);
+            // Calculate progress only if the goal is not completed
+            const progress = goal.is_completed
+              ? 100 // Always show 100% for completed goals
+              : Math.min(
+                  Math.round(
+                    (balanceData.currentBalance / parseFloat(goal.amount)) * 100
+                  ) || 0,
+                  100
+                );
+
+            // For completed goals, use the goal amount instead of current balance
+            const displayBalance = goal.is_completed
+              ? parseFloat(goal.amount)
+              : balanceData.currentBalance;
 
             return (
               <motion.div
@@ -332,32 +338,6 @@ const Goals = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-gray-800 rounded-xl border border-gray-700 p-6 space-y-4"
               >
-                {isGoalReached && !goal.is_completed && (
-                  <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-3 mb-4">
-                    <div className="flex flex-col space-y-3">
-                      <p className="text-green-400 text-sm font-medium">
-                        🎉 Congratulations! You've reached your target of ₱
-                        {parseFloat(goal.amount).toLocaleString("en-US", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </p>
-                      <button
-                        onClick={() =>
-                          handleMarkAccomplished(
-                            goal.goal_id,
-                            parseFloat(goal.amount),
-                            goal.description
-                          )
-                        }
-                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm transition-colors w-full"
-                      >
-                        Mark as Accomplished
-                      </button>
-                    </div>
-                  </div>
-                )}
-
                 {goal.is_completed && (
                   <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-3 mb-4">
                     <p className="text-green-400 text-sm font-medium flex items-center">
@@ -414,7 +394,7 @@ const Goals = () => {
                     <span className="text-gray-400">Progress</span>
                     <span
                       className={
-                        isGoalReached ? "text-green-400" : "text-white"
+                        goal.is_completed ? "text-green-400" : "text-white"
                       }
                     >
                       {progress}%
@@ -423,7 +403,7 @@ const Goals = () => {
                   <div className="w-full bg-gray-700 rounded-full h-2">
                     <div
                       className={`${
-                        isGoalReached ? "bg-green-500" : "bg-purple-500"
+                        goal.is_completed ? "bg-green-500" : "bg-purple-500"
                       } rounded-full h-2 transition-all duration-500`}
                       style={{
                         width: `${progress}%`,
@@ -432,16 +412,15 @@ const Goals = () => {
                   </div>
 
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Current Balance</span>
+                    <span className="text-gray-400">
+                      {goal.is_completed ? "Final Balance" : "Current Balance"}
+                    </span>
                     <span className="text-white">
                       ₱
-                      {(balanceData.currentBalance || 0).toLocaleString(
-                        "en-US",
-                        {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        }
-                      )}
+                      {displayBalance.toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
