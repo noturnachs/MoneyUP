@@ -38,6 +38,8 @@ const Dashboard = () => {
   const [primaryGoal, setPrimaryGoal] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [transactionsPerPage] = useState(5);
+  const [sortOrder, setSortOrder] = useState("latest");
+  const [filterType, setFilterType] = useState("all");
 
   const fetchThreshold = useCallback(async () => {
     try {
@@ -355,6 +357,24 @@ const Dashboard = () => {
         </div>
       </div>
     );
+  };
+
+  const getFilteredTransactions = () => {
+    let filtered = [...recentTransactions];
+
+    // Filter by type
+    if (filterType !== "all") {
+      filtered = filtered.filter((t) => t.type === filterType);
+    }
+
+    // Sort by date
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.created_at);
+      const dateB = new Date(b.created_at);
+      return sortOrder === "latest" ? dateB - dateA : dateA - dateB;
+    });
+
+    return filtered;
   };
 
   if (isLoading) {
@@ -820,7 +840,29 @@ const Dashboard = () => {
       {/* Recent Updates Section */}
       <div className="bg-gray-800 rounded-xl border border-gray-700 mt-6">
         <div className="p-6 border-b border-gray-700">
-          <h3 className="text-lg font-medium text-white">Recent Updates</h3>
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-medium text-white">Recent Updates</h3>
+            <div className="flex space-x-4">
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="bg-gray-700 border-gray-600 text-white rounded-md text-sm px-3 py-1"
+              >
+                <option value="all">All Transactions</option>
+                <option value="income">Income Only</option>
+                <option value="expense">Expenses Only</option>
+              </select>
+
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                className="bg-gray-700 border-gray-600 text-white rounded-md text-sm px-3 py-1"
+              >
+                <option value="latest">Latest First</option>
+                <option value="oldest">Oldest First</option>
+              </select>
+            </div>
+          </div>
         </div>
         <div className="overflow-x-auto max-h-[400px] scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800">
           <table className="w-full">
@@ -834,7 +876,7 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
-              {recentTransactions
+              {getFilteredTransactions()
                 .slice(
                   (currentPage - 1) * transactionsPerPage,
                   currentPage * transactionsPerPage
@@ -894,7 +936,7 @@ const Dashboard = () => {
                     </td>
                   </tr>
                 ))}
-              {recentTransactions.length === 0 && (
+              {getFilteredTransactions().length === 0 && (
                 <tr>
                   <td colSpan="5" className="p-4 text-center text-gray-500">
                     No recent transactions
@@ -904,9 +946,9 @@ const Dashboard = () => {
             </tbody>
           </table>
         </div>
-        {recentTransactions.length > 0 && (
+        {getFilteredTransactions().length > 0 && (
           <Pagination
-            totalItems={recentTransactions.length}
+            totalItems={getFilteredTransactions().length}
             itemsPerPage={transactionsPerPage}
             currentPage={currentPage}
             onPageChange={setCurrentPage}
