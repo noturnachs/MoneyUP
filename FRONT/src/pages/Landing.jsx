@@ -7,6 +7,7 @@ import {
   ArrowTrendingUpIcon,
 } from "@heroicons/react/24/outline";
 import { useState, useEffect } from "react";
+import Pricing from "./Pricing";
 
 const Landing = () => {
   const { user, logout } = useAuth();
@@ -164,20 +165,42 @@ const Landing = () => {
                       : "translateY(20px)",
                   }}
                 >
-                  <div className="flow-root bg-gray-900 rounded-lg px-6 pb-8">
+                  <div
+                    className="flow-root bg-gray-900 rounded-lg px-6 pb-8 
+                    transition-all duration-300 ease-in-out transform 
+                    hover:scale-105 hover:-translate-y-2 
+                    hover:shadow-xl hover:shadow-purple-500/10 
+                    hover:border-purple-500/50 border-2 border-transparent
+                    group"
+                  >
                     <div className="-mt-6">
                       <div>
-                        <span className="inline-flex items-center justify-center p-3 bg-purple-500 rounded-md shadow-lg">
+                        <span
+                          className="inline-flex items-center justify-center p-3 
+                          bg-purple-500 rounded-md shadow-lg
+                          transition-all duration-300 ease-in-out
+                          group-hover:bg-purple-400 group-hover:scale-110
+                          group-hover:rotate-3"
+                        >
                           <feature.icon
-                            className="h-6 w-6 text-white"
+                            className="h-6 w-6 text-white transition-transform 
+                              duration-300 ease-in-out group-hover:scale-110"
                             aria-hidden="true"
                           />
                         </span>
                       </div>
-                      <h3 className="mt-8 text-lg font-medium text-white tracking-tight">
+                      <h3
+                        className="mt-8 text-lg font-medium text-white tracking-tight
+                        transition-colors duration-300 ease-in-out
+                        group-hover:text-purple-400"
+                      >
                         {feature.title}
                       </h3>
-                      <p className="mt-5 text-base text-gray-400">
+                      <p
+                        className="mt-5 text-base text-gray-400
+                        transition-colors duration-300 ease-in-out
+                        group-hover:text-gray-300"
+                      >
                         {feature.description}
                       </p>
                     </div>
@@ -187,6 +210,17 @@ const Landing = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Add Pricing Section here, before the CTA */}
+      <div
+        className={`transition-all duration-700 ease-out transform ${
+          isVisible.features
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-8"
+        }`}
+      >
+        <Pricing />
       </div>
 
       {/* CTA Section */}

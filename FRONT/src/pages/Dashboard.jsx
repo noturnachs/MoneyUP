@@ -1,18 +1,6 @@
-import { lazy, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { CheckCircleIcon } from "@heroicons/react/24/outline";
-
-// Lazy load components that aren't immediately needed
-const TransactionForm = lazy(() =>
-  import("../components/transactions/TransactionForm")
-);
-const TransactionList = lazy(() =>
-  import("../components/transactions/TransactionList")
-);
-const ExpenseChart = lazy(() => import("../components/charts/ExpenseChart"));
-const IncomeVsExpense = lazy(() =>
-  import("../components/charts/IncomeVsExpense")
-);
 
 const Dashboard = () => {
   const { user } = useAuth();
