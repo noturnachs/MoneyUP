@@ -206,6 +206,65 @@ const Goals = () => {
     setShowModal(true);
   };
 
+  const handleMarkAccomplished = async (
+    goalId,
+    goalAmount,
+    goalDescription
+  ) => {
+    try {
+      // First mark the goal as accomplished
+      const response = await fetch(
+        `http://localhost:5000/api/goals/${goalId}/accomplish`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({
+            amount: goalAmount,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        // Create an expense for the accomplished goal amount
+        const expenseResponse = await fetch(
+          "http://localhost:5000/api/expenses",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+            body: JSON.stringify({
+              amount: goalAmount,
+              description: `Goal Accomplished: ${goalDescription}`,
+              category_id: 1, // Make sure to use appropriate category_id for goals
+              date: new Date().toISOString(),
+            }),
+          }
+        );
+
+        if (expenseResponse.ok) {
+          // Dispatch event to update balances across the app
+          window.dispatchEvent(new Event("expenseAdded"));
+
+          // Refresh goals and balance
+          await Promise.all([fetchGoals(), fetchBalance()]);
+        } else {
+          alert("Failed to update balance");
+        }
+      } else {
+        const data = await response.json();
+        alert(data.message || "Failed to mark goal as accomplished");
+      }
+    } catch (error) {
+      console.error("Error marking goal as accomplished:", error);
+      alert("Failed to mark goal as accomplished");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -273,14 +332,49 @@ const Goals = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-gray-800 rounded-xl border border-gray-700 p-6 space-y-4"
               >
-                {isGoalReached && (
+                {isGoalReached && !goal.is_completed && (
                   <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-3 mb-4">
-                    <p className="text-green-400 text-sm font-medium">
-                      🎉 Congratulations! You've reached your target of ₱
-                      {parseFloat(goal.amount).toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                    <div className="flex flex-col space-y-3">
+                      <p className="text-green-400 text-sm font-medium">
+                        🎉 Congratulations! You've reached your target of ₱
+                        {parseFloat(goal.amount).toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </p>
+                      <button
+                        onClick={() =>
+                          handleMarkAccomplished(
+                            goal.goal_id,
+                            parseFloat(goal.amount),
+                            goal.description
+                          )
+                        }
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm transition-colors w-full"
+                      >
+                        Mark as Accomplished
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {goal.is_completed && (
+                  <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-3 mb-4">
+                    <p className="text-green-400 text-sm font-medium flex items-center">
+                      <svg
+                        className="h-5 w-5 mr-2"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      Goal Accomplished!
                     </p>
                   </div>
                 )}

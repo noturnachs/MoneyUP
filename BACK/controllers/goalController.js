@@ -1,3 +1,4 @@
+const db = require("../config/database");
 const Goal = require("../models/Goal");
 const { validateGoal } = require("../utils/helpers");
 
@@ -102,15 +103,67 @@ class GoalController {
 
   static async getPrimaryGoal(req, res) {
     try {
-      const goal = await Goal.findPrimaryGoal(req.user.id);
-      res.json({ success: true, goal });
+      const [goals] = await db.execute(
+        `SELECT * FROM goals 
+         WHERE user_id = ? 
+         AND is_completed = false 
+         ORDER BY created_at DESC 
+         LIMIT 1`,
+        [req.user.id]
+      );
+
+      res.json({
+        success: true,
+        goals,
+      });
     } catch (error) {
-      console.error("Error in getPrimaryGoal:", error);
+      console.error("Error fetching primary goal:", error);
       res.status(500).json({
         success: false,
         message: "Failed to fetch primary goal",
-        error: error.message,
       });
+    }
+  }
+
+  static async markAccomplished(req, res) {
+    const conn = await db.getConnection();
+
+    try {
+      await conn.beginTransaction();
+
+      const { amount } = req.body;
+
+      // Mark goal as completed
+      const [result] = await conn.execute(
+        `UPDATE goals 
+         SET is_completed = true 
+         WHERE goal_id = ? AND user_id = ?`,
+        [req.params.id, req.user.id]
+      );
+
+      if (result.affectedRows === 0) {
+        await conn.rollback();
+        return res.status(404).json({
+          success: false,
+          message: "Goal not found or unauthorized",
+        });
+      }
+
+      await conn.commit();
+
+      res.json({
+        success: true,
+        message: "Goal marked as accomplished",
+      });
+    } catch (error) {
+      await conn.rollback();
+      console.error("Error marking goal as accomplished:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to mark goal as accomplished",
+      });
+    } finally {
+      conn.release();
     }
   }
 }

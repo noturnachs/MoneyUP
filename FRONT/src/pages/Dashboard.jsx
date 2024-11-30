@@ -119,7 +119,7 @@ const Dashboard = () => {
     }
   };
 
-  const fetchPrimaryGoal = useCallback(async () => {
+  const fetchPrimaryGoal = async () => {
     try {
       const response = await fetch("http://localhost:5000/api/goals/primary", {
         headers: {
@@ -127,13 +127,14 @@ const Dashboard = () => {
         },
       });
       const data = await response.json();
-      if (data.success && data.goal) {
-        setPrimaryGoal(data.goal);
+      if (data.success) {
+        const activeGoal = data.goals.find((goal) => !goal.is_completed);
+        setPrimaryGoal(activeGoal || null);
       }
     } catch (error) {
       console.error("Error fetching primary goal:", error);
     }
-  }, []);
+  };
 
   useEffect(() => {
     if (hasData) {
@@ -750,9 +751,9 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="text-center py-4">
-            <p className="text-gray-400 mb-2">No savings goal set</p>
+            <p className="text-gray-400 mb-2">No active savings goal</p>
             <Link to="/goals" className="text-purple-400 hover:text-purple-300">
-              Set a goal to start tracking your progress
+              Set a new goal to start tracking your progress
             </Link>
           </div>
         )}
