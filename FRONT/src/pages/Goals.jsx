@@ -8,6 +8,10 @@ import {
 import { motion } from "framer-motion";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { ring } from "ldrs";
+
+// Initialize the loader
+ring.register();
 
 const datePickerStyles = `
   input[type="date"]::-webkit-calendar-picker-indicator {
@@ -260,8 +264,15 @@ const Goals = () => {
 
   if (isLoading || balanceData.currentBalance === null) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-gray-400">Loading...</div>
+      <div className="flex flex-col items-center justify-center h-screen">
+        <l-ring
+          size="40"
+          stroke="5"
+          bg-opacity="0"
+          speed="2"
+          color="rgb(147, 51, 234)"
+        />
+        <span className="mt-4 text-gray-400">Loading goals...</span>
       </div>
     );
   }

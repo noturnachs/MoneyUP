@@ -1,24 +1,29 @@
 const db = require("../config/database");
 
 exports.create = async (req, res) => {
-  const conn = await db.getConnection();
+  const client = await db.getConnection();
 
   try {
-    await conn.beginTransaction();
+    await client.query("BEGIN");
 
     const { amount, description, category_id, date } = req.body;
     const userId = req.user.id;
 
-    // First, check the current balance (but don't prevent negative balance)
-    const [balanceResult] = await conn.execute(
+    // Get current balance and threshold
+    const { rows: balanceResult } = await client.query(
       `SELECT 
-        (SELECT COALESCE(SUM(amount), 0) FROM income WHERE user_id = ?) -
-        (SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE user_id = ?) as current_balance,
-        (SELECT account_threshold FROM users WHERE user_id = ?) as threshold`,
-      [userId, userId, userId]
+        (SELECT COALESCE(SUM(amount), 0) FROM income WHERE user_id = $1) -
+        (SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE user_id = $1) as current_balance,
+        (SELECT account_threshold FROM users WHERE user_id = $1) as threshold`,
+      [userId]
     );
 
-    const currentBalance = parseFloat(balanceResult[0].current_balance);
+    // Make sure we have results
+    if (!balanceResult || balanceResult.length === 0) {
+      throw new Error("Could not retrieve balance information");
+    }
+
+    const currentBalance = parseFloat(balanceResult[0].current_balance || 0);
     const expenseAmount = parseFloat(amount);
     const threshold = balanceResult[0].threshold;
 
@@ -36,61 +41,74 @@ exports.create = async (req, res) => {
     }
 
     // Insert the expense
-    const [result] = await conn.execute(
+    const {
+      rows: [expense],
+    } = await client.query(
       `INSERT INTO expenses (user_id, amount, description, category_id, date) 
-       VALUES (?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5) 
+       RETURNING expense_id`,
       [userId, amount, description, category_id, date]
     );
 
-    await conn.commit();
-
     // Fetch the created expense with category name
-    const [expense] = await db.execute(
+    const {
+      rows: [expenseWithCategory],
+    } = await client.query(
       `SELECT e.*, c.name as category_name 
        FROM expenses e 
        LEFT JOIN categories c ON e.category_id = c.category_id 
-       WHERE e.expense_id = ?`,
-      [result.insertId]
+       WHERE e.expense_id = $1`,
+      [expense.expense_id]
     );
+
+    await client.query("COMMIT");
 
     res.json({
       success: true,
-      expense: expense[0],
+      expense: {
+        ...expenseWithCategory,
+        amount: parseFloat(expenseWithCategory.amount),
+      },
       warning,
       newBalance: balanceAfterExpense,
     });
   } catch (error) {
-    await conn.rollback();
+    await client.query("ROLLBACK");
     console.error("Error creating expense:", error);
     res.status(500).json({
       success: false,
       message: "Failed to create expense",
+      error: error.message,
     });
   } finally {
-    conn.release();
+    client.release();
   }
 };
 
 exports.getAll = async (req, res) => {
   try {
-    const [expenses] = await db.execute(
+    const { rows } = await db.execute(
       `SELECT e.*, c.name as category_name 
        FROM expenses e 
        LEFT JOIN categories c ON e.category_id = c.category_id 
-       WHERE e.user_id = ? 
+       WHERE e.user_id = $1 
        ORDER BY e.created_at DESC`,
       [req.user.id]
     );
 
     res.json({
       success: true,
-      expenses,
+      expenses: rows.map((expense) => ({
+        ...expense,
+        amount: parseFloat(expense.amount),
+      })),
     });
   } catch (error) {
     console.error("Error fetching expenses:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch expenses",
+      error: error.message,
     });
   }
 };
@@ -138,7 +156,7 @@ exports.getCategories = async (req, res) => {
 
 exports.getRecent = async (req, res) => {
   try {
-    const [expenses] = await db.execute(
+    const { rows } = await db.execute(
       `SELECT 
         e.expense_id as id,
         e.amount,
@@ -147,7 +165,7 @@ exports.getRecent = async (req, res) => {
         c.name as category_name
        FROM expenses e
        LEFT JOIN categories c ON e.category_id = c.category_id
-       WHERE e.user_id = ?
+       WHERE e.user_id = $1
        ORDER BY e.created_at DESC
        LIMIT 10`,
       [req.user.id]
@@ -155,67 +173,112 @@ exports.getRecent = async (req, res) => {
 
     res.json({
       success: true,
-      expenses,
+      expenses: rows.map((expense) => ({
+        ...expense,
+        amount: parseFloat(expense.amount),
+      })),
     });
   } catch (error) {
     console.error("Error fetching recent expenses:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch recent expenses",
+      error: error.message,
     });
   }
 };
 
 exports.getTotal = async (req, res) => {
   try {
-    const [result] = await db.execute(
-      "SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE user_id = ?",
-      [req.user.id]
-    );
+    const userId = req.user.id;
+    const { startDate, endDate } = req.query;
+
+    let query = `
+      SELECT COALESCE(SUM(amount), 0) as total 
+      FROM expenses 
+      WHERE user_id = $1`;
+
+    let params = [userId];
+    let paramCount = 1;
+
+    if (startDate) {
+      paramCount++;
+      query += ` AND date >= $${paramCount}`;
+      params.push(startDate);
+    }
+
+    if (endDate) {
+      paramCount++;
+      query += ` AND date <= $${paramCount}`;
+      params.push(endDate);
+    }
+
+    const { rows } = await db.execute(query, params);
 
     res.json({
       success: true,
-      total: parseFloat(result[0].total),
+      total: parseFloat(rows[0].total),
     });
   } catch (error) {
     console.error("Error getting total expenses:", error);
     res.status(500).json({
       success: false,
-      message: "Error fetching total expenses",
+      message: "Error retrieving total expenses",
+      error: error.message,
     });
   }
 };
 
 exports.getByCategory = async (req, res) => {
   try {
-    const [results] = await db.execute(
-      `
+    const { startDate, endDate } = req.query;
+    let query = `
       SELECT 
         c.name as category,
-        COALESCE(SUM(e.amount), 0) as amount
+        COALESCE(SUM(e.amount), 0) as amount,
+        COUNT(e.expense_id) as count
       FROM categories c
       LEFT JOIN expenses e ON c.category_id = e.category_id 
-        AND e.user_id = ?
-      WHERE c.type = 'expense'
-      GROUP BY c.category_id, c.name
-      HAVING amount > 0
-      ORDER BY amount DESC
-    `,
-      [req.user.id]
-    );
+        AND e.user_id = $1
+      WHERE c.user_id = $1 
+        AND c.type = 'expense'`;
 
+    const params = [req.user.id];
+    let paramIndex = 1;
+
+    if (startDate) {
+      paramIndex++;
+      query += ` AND e.date >= $${paramIndex}`;
+      params.push(startDate);
+    }
+
+    if (endDate) {
+      paramIndex++;
+      query += ` AND e.date <= $${paramIndex}`;
+      params.push(endDate);
+    }
+
+    query += ` GROUP BY c.category_id, c.name
+               HAVING COALESCE(SUM(e.amount), 0) > 0
+               ORDER BY amount DESC`;
+
+    const { rows } = await db.execute(query, params);
+
+    // Format the response to match the frontend expectations
     res.json({
       success: true,
-      categories: results.map((row) => ({
+      categories: rows.map((row) => ({
         category: row.category,
-        amount: parseFloat(row.amount),
+        amount: parseFloat(row.amount || 0),
+        count: parseInt(row.count || 0),
       })),
     });
   } catch (error) {
     console.error("Error getting expenses by category:", error);
     res.status(500).json({
       success: false,
-      message: "Error fetching category data",
+      message: "Failed to get expenses by category",
+      error: error.message,
     });
   }
 };

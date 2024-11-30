@@ -2,9 +2,9 @@ const db = require("../config/database");
 
 class Category {
   static async getAll(userId) {
-    const [rows] = await db.execute(
+    const { rows } = await db.execute(
       `SELECT * FROM categories 
-       WHERE user_id = ? OR user_id IS NULL
+       WHERE user_id = $1 OR user_id IS NULL
        ORDER BY name ASC`,
       [userId]
     );
@@ -12,10 +12,10 @@ class Category {
   }
 
   static async getByType(userId, type) {
-    const [rows] = await db.execute(
+    const { rows } = await db.execute(
       `SELECT * FROM categories 
-       WHERE (user_id = ? OR user_id IS NULL) 
-       AND type = ?
+       WHERE (user_id = $1 OR user_id IS NULL) 
+       AND type = $2
        ORDER BY name ASC`,
       [userId, type]
     );
@@ -23,37 +23,40 @@ class Category {
   }
 
   static async create(categoryData) {
-    const [result] = await db.execute(
+    const { rows } = await db.execute(
       `INSERT INTO categories (name, type, user_id) 
-       VALUES (?, ?, ?)`,
+       VALUES ($1, $2, $3)
+       RETURNING *`,
       [categoryData.name, categoryData.type, categoryData.user_id]
     );
-    return result;
+    return rows[0];
   }
 
   static async update(id, userId, categoryData) {
-    const [result] = await db.execute(
+    const { rows } = await db.execute(
       `UPDATE categories 
-       SET name = ?, type = ? 
-       WHERE category_id = ? AND user_id = ?`,
+       SET name = $1, type = $2 
+       WHERE category_id = $3 AND user_id = $4
+       RETURNING *`,
       [categoryData.name, categoryData.type, id, userId]
     );
-    return result;
+    return rows[0];
   }
 
   static async delete(id, userId) {
-    const [result] = await db.execute(
+    const { rows } = await db.execute(
       `DELETE FROM categories 
-       WHERE category_id = ? AND user_id = ?`,
+       WHERE category_id = $1 AND user_id = $2
+       RETURNING *`,
       [id, userId]
     );
-    return result;
+    return rows[0];
   }
 
   static async findById(id, userId) {
-    const [rows] = await db.execute(
+    const { rows } = await db.execute(
       `SELECT * FROM categories 
-       WHERE category_id = ? AND (user_id = ? OR user_id IS NULL)`,
+       WHERE category_id = $1 AND (user_id = $2 OR user_id IS NULL)`,
       [id, userId]
     );
     return rows[0];

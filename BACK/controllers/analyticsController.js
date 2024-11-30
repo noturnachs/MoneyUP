@@ -14,17 +14,19 @@ exports.getSummary = async (req, res) => {
     } else {
       switch (timeframe) {
         case "daily":
-          dateFilter = "AND DATE(date) = CURDATE()";
+          dateFilter = "AND DATE(date) = CURRENT_DATE";
           break;
         case "weekly":
-          dateFilter = "AND YEARWEEK(date) = YEARWEEK(CURDATE())";
+          dateFilter =
+            "AND DATE_PART('week', date) = DATE_PART('week', CURRENT_DATE)";
           break;
         case "monthly":
           dateFilter =
-            "AND YEAR(date) = YEAR(CURDATE()) AND MONTH(date) = MONTH(CURDATE())";
+            "AND DATE_PART('year', date) = DATE_PART('year', CURRENT_DATE) AND DATE_PART('month', date) = DATE_PART('month', CURRENT_DATE)";
           break;
         case "yearly":
-          dateFilter = "AND YEAR(date) = YEAR(CURDATE())";
+          dateFilter =
+            "AND DATE_PART('year', date) = DATE_PART('year', CURRENT_DATE)";
           break;
       }
     }
@@ -133,68 +135,65 @@ exports.getExpensesByCategory = async (req, res) => {
 
 exports.getIncomeVsExpenses = async (req, res) => {
   try {
-    const { timeframe } = req.query;
     const userId = req.user.id;
+    const { period = "month" } = req.query;
 
-    let dateFormat, groupBy;
-    switch (timeframe) {
-      case "daily":
-        dateFormat = "%Y-%m-%d";
-        groupBy = "DATE(date)";
+    let timeFormat;
+    switch (period) {
+      case "week":
+        timeFormat = "YYYY-IW";
         break;
-      case "weekly":
-        dateFormat = "%Y-W%u";
-        groupBy = "YEARWEEK(date)";
+      case "month":
+        timeFormat = "YYYY-MM";
         break;
-      case "monthly":
-        dateFormat = "%Y-%m";
-        groupBy = 'DATE_FORMAT(date, "%Y-%m")';
-        break;
-      case "yearly":
-        dateFormat = "%Y";
-        groupBy = "YEAR(date)";
+      case "year":
+        timeFormat = "YYYY";
         break;
       default:
-        dateFormat = "%Y-%m";
-        groupBy = 'DATE_FORMAT(date, "%Y-%m")';
+        timeFormat = "YYYY-MM";
     }
 
     const query = `
-      SELECT 
-        period,
-        COALESCE(SUM(income), 0) as income,
-        COALESCE(SUM(expenses), 0) as expenses
-      FROM (
+      WITH time_series AS (
         SELECT 
-          DATE_FORMAT(date, ?) as period,
-          amount as income,
-          0 as expenses
+          to_char(date_trunc($1, dd)::date, $2) as time_period
+        FROM generate_series(
+          date_trunc($1, current_date - interval '6 months'),
+          current_date,
+          interval '1 ${period}'
+        ) dd
+      ),
+      income_data AS (
+        SELECT 
+          to_char(date_trunc($1, date)::date, $2) as time_period,
+          COALESCE(SUM(amount), 0) as total_income
         FROM income
-        WHERE user_id = ?
-        UNION ALL
+        WHERE user_id = $3
+        GROUP BY time_period
+      ),
+      expense_data AS (
         SELECT 
-          DATE_FORMAT(date, ?) as period,
-          0 as income,
-          amount as expenses
+          to_char(date_trunc($1, date)::date, $2) as time_period,
+          COALESCE(SUM(amount), 0) as total_expenses
         FROM expenses
-        WHERE user_id = ?
-      ) combined
-      GROUP BY period
-      ORDER BY period DESC
-      LIMIT 12
-    `;
+        WHERE user_id = $3
+        GROUP BY time_period
+      )
+      SELECT 
+        ts.time_period,
+        COALESCE(i.total_income, 0) as income,
+        COALESCE(e.total_expenses, 0) as expenses
+      FROM time_series ts
+      LEFT JOIN income_data i ON ts.time_period = i.time_period
+      LEFT JOIN expense_data e ON ts.time_period = e.time_period
+      ORDER BY ts.time_period`;
 
-    const [results] = await db.execute(query, [
-      dateFormat,
-      userId,
-      dateFormat,
-      userId,
-    ]);
+    const { rows } = await db.execute(query, [period, timeFormat, userId]);
 
     res.json({
       success: true,
-      data: results.map((row) => ({
-        period: row.period,
+      data: rows.map((row) => ({
+        period: row.time_period,
         income: parseFloat(row.income),
         expenses: parseFloat(row.expenses),
       })),
@@ -203,7 +202,8 @@ exports.getIncomeVsExpenses = async (req, res) => {
     console.error("Error getting income vs expenses:", error);
     res.status(500).json({
       success: false,
-      message: "Error fetching comparison data",
+      message: "Failed to get income vs expenses comparison",
+      error: error.message,
     });
   }
 };
@@ -212,182 +212,126 @@ exports.getInsights = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Get current month's expenses by category
-    const currentMonthQuery = `
-      SELECT 
-        c.name as category,
-        COALESCE(SUM(e.amount), 0) as amount
-      FROM categories c
-      LEFT JOIN expenses e ON c.category_id = e.category_id 
-        AND e.user_id = ?
-        AND YEAR(e.date) = YEAR(CURDATE())
-        AND MONTH(e.date) = MONTH(CURDATE())
-      WHERE c.type = 'expense'
-      GROUP BY c.category_id, c.name
-      HAVING amount > 0
-    `;
-
-    // Get last month's expenses by category
-    const lastMonthQuery = `
-      SELECT 
-        c.name as category,
-        COALESCE(SUM(e.amount), 0) as amount
-      FROM categories c
-      LEFT JOIN expenses e ON c.category_id = e.category_id 
-        AND e.user_id = ?
-        AND YEAR(e.date) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
-        AND MONTH(e.date) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH))
-      WHERE c.type = 'expense'
-      GROUP BY c.category_id, c.name
-      HAVING amount > 0
-    `;
-
-    // Get average monthly expenses by category for last 6 months
-    const avgMonthlyQuery = `
-      SELECT 
-        c.name as category,
-        COALESCE(AVG(monthly_amount), 0) as avg_amount
-      FROM categories c
-      LEFT JOIN (
+    // Get current and previous month's expenses with categories
+    const query = `
+      WITH current_month AS (
         SELECT 
-          category_id,
-          YEAR(date) as year,
-          MONTH(date) as month,
-          SUM(amount) as monthly_amount
-        FROM expenses
-        WHERE user_id = ?
-          AND date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
-        GROUP BY category_id, YEAR(date), MONTH(date)
-      ) monthly ON c.category_id = monthly.category_id
-      WHERE c.type = 'expense'
-      GROUP BY c.category_id, c.name
-      HAVING avg_amount > 0
-    `;
+          c.name as category_name,
+          COALESCE(SUM(e.amount), 0) as amount
+        FROM categories c
+        LEFT JOIN expenses e ON 
+          c.category_id = e.category_id 
+          AND e.date >= date_trunc('month', current_date)
+          AND e.date < date_trunc('month', current_date + interval '1 month')
+          AND e.user_id = $1
+        WHERE c.type = 'expense' AND c.user_id = $1
+        GROUP BY c.category_id, c.name
+      ),
+      previous_month AS (
+        SELECT 
+          c.name as category_name,
+          COALESCE(SUM(e.amount), 0) as amount
+        FROM categories c
+        LEFT JOIN expenses e ON 
+          c.category_id = e.category_id 
+          AND e.date >= date_trunc('month', current_date - interval '1 month')
+          AND e.date < date_trunc('month', current_date)
+          AND e.user_id = $1
+        WHERE c.type = 'expense' AND c.user_id = $1
+        GROUP BY c.category_id, c.name
+      ),
+      comparison AS (
+        SELECT 
+          cm.category_name,
+          cm.amount as current_amount,
+          pm.amount as previous_amount,
+          CASE 
+            WHEN pm.amount > 0 THEN 
+              ((cm.amount - pm.amount) / pm.amount * 100)
+            WHEN cm.amount > 0 THEN 
+              100
+            ELSE 
+              0
+          END as change_percentage
+        FROM current_month cm
+        LEFT JOIN previous_month pm ON cm.category_name = pm.category_name
+        WHERE cm.amount > 0 OR pm.amount > 0
+      )
+      SELECT * FROM comparison
+      WHERE ABS(change_percentage) > 0
+      ORDER BY ABS(change_percentage) DESC`;
 
-    // Get unusual transactions (>50% above category average)
-    const unusualTransactionsQuery = `
-      SELECT 
-        e.description,
-        e.amount,
-        c.name as category,
-        e.date
-      FROM expenses e
-      JOIN categories c ON e.category_id = c.category_id
-      WHERE e.user_id = ?
-        AND e.date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
-        AND e.amount > (
-          SELECT AVG(amount) * 1.5
-          FROM expenses e2
-          WHERE e2.category_id = e.category_id
-            AND e2.user_id = ?
-            AND e2.date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
-        )
-      ORDER BY e.amount DESC
-      LIMIT 5
-    `;
+    const { rows: categoryComparisons } = await db.execute(query, [userId]);
 
-    const [currentMonth] = await db.execute(currentMonthQuery, [userId]);
-    const [lastMonth] = await db.execute(lastMonthQuery, [userId]);
-    const [avgMonthly] = await db.execute(avgMonthlyQuery, [userId]);
-    const [unusualTransactions] = await db.execute(unusualTransactionsQuery, [
-      userId,
-      userId,
-    ]);
+    // Process monthly comparison insights (focus on biggest changes)
+    const monthlyComparison = categoryComparisons
+      .map((cat) => ({
+        type: cat.change_percentage > 0 ? "increase" : "decrease",
+        message: `${cat.category_name} spending ${
+          cat.change_percentage > 0 ? "increased" : "decreased"
+        } by ${Math.abs(cat.change_percentage).toFixed(1)}% from last month`,
+        percentage: cat.change_percentage,
+      }))
+      .slice(0, 3); // Top 3 changes
 
-    // Generate monthly comparison insights
-    const monthlyComparison = [];
-    currentMonth.forEach((current) => {
-      const lastMonthCategory = lastMonth.find(
-        (last) => last.category === current.category
-      );
-      if (lastMonthCategory) {
-        const difference =
-          ((current.amount - lastMonthCategory.amount) /
-            lastMonthCategory.amount) *
-          100;
-        if (Math.abs(difference) >= 10) {
-          // Only show significant changes (>=10%)
-          monthlyComparison.push({
-            type: difference > 0 ? "increase" : "decrease",
-            message: `${current.category} spending ${
-              difference > 0 ? "increased" : "decreased"
-            } by ${Math.abs(difference).toFixed(0)}%`,
-          });
+    // Process category insights (focus on spending patterns)
+    const categoryInsights = categoryComparisons
+      .map((cat) => {
+        const currentAmount = parseFloat(cat.current_amount);
+        const previousAmount = parseFloat(cat.previous_amount);
+
+        if (currentAmount > previousAmount * 1.2) {
+          // 20% increase
+          return {
+            status: "high",
+            message: `Higher than usual spending in ${cat.category_name} this month`,
+          };
+        } else if (currentAmount < previousAmount * 0.8) {
+          // 20% decrease
+          return {
+            status: "low",
+            message: `Lower than usual spending in ${cat.category_name} this month`,
+          };
+        } else if (currentAmount > 0 && previousAmount === 0) {
+          return {
+            status: "new",
+            message: `New spending in ${cat.category_name} category this month`,
+          };
         }
-      }
-    });
+        return null;
+      })
+      .filter(Boolean)
+      .slice(0, 3);
 
-    // If no monthly comparisons were found
-    if (monthlyComparison.length === 0) {
-      monthlyComparison.push({
-        type: "neutral",
-        message: "No significant changes from last month",
-      });
-    }
-
-    // Generate category insights
-    const categoryInsights = [];
-    currentMonth.forEach((current) => {
-      const avgCategory = avgMonthly.find(
-        (avg) => avg.category === current.category
-      );
-      if (avgCategory) {
-        const difference =
-          ((current.amount - avgCategory.avg_amount) / avgCategory.avg_amount) *
-          100;
-        let status = "normal";
-        if (difference >= 20) status = "high";
-        if (difference <= -20) status = "low";
-
-        if (status !== "normal") {
-          categoryInsights.push({
-            status,
-            message: `${current.category} spending is ${
-              status === "high" ? "higher" : "lower"
-            } than usual`,
-          });
-        }
-      }
-    });
-
-    // If no category insights were found
-    if (categoryInsights.length === 0) {
-      categoryInsights.push({
-        status: "normal",
-        message: "All categories are within normal spending ranges",
-      });
-    }
-
-    // Format unusual spending insights
-    const unusualSpending = unusualTransactions.map((transaction) => ({
-      message: `Unusual ${
-        transaction.category
-      } expense: ${new Intl.NumberFormat("en-PH", {
-        style: "currency",
-        currency: "PHP",
-      }).format(transaction.amount)} on ${new Date(
-        transaction.date
-      ).toLocaleDateString()}`,
-    }));
-
-    // If no unusual transactions were found
-    if (unusualSpending.length === 0) {
-      unusualSpending.push({
-        message: "No unusual spending patterns detected",
-      });
-    }
+    // Calculate unusual spending patterns (focus on significant deviations)
+    const unusualSpending = categoryComparisons
+      .filter((cat) => Math.abs(cat.change_percentage) > 50)
+      .map((cat) => ({
+        type: cat.change_percentage > 0 ? "increase" : "decrease",
+        message: `${cat.category_name} spending is ${Math.abs(
+          cat.change_percentage
+        ).toFixed(1)}% ${
+          cat.change_percentage > 0 ? "higher" : "lower"
+        } than last month`,
+        amount: parseFloat(cat.current_amount),
+      }))
+      .slice(0, 3);
 
     res.json({
       success: true,
-      monthlyComparison,
-      categoryInsights,
-      unusualSpending,
+      insights: {
+        monthlyComparison:
+          monthlyComparison.length > 0 ? monthlyComparison : null,
+        categoryInsights: categoryInsights.length > 0 ? categoryInsights : null,
+        unusualSpending: unusualSpending.length > 0 ? unusualSpending : null,
+      },
     });
   } catch (error) {
     console.error("Error getting insights:", error);
     res.status(500).json({
       success: false,
-      message: "Error fetching insights",
+      message: "Failed to get spending insights",
+      error: error.message,
     });
   }
 };

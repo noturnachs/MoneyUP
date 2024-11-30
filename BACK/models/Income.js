@@ -2,9 +2,9 @@ const db = require("../config/database");
 
 class Income {
   static async findByUserId(userId) {
-    const [rows] = await db.execute(
+    const { rows } = await db.execute(
       `SELECT * FROM income 
-       WHERE user_id = ? 
+       WHERE user_id = $1 
        ORDER BY created_at DESC`,
       [userId]
     );
@@ -12,50 +12,46 @@ class Income {
   }
 
   static async create(incomeData) {
-    const connection = await db.getConnection();
+    const client = await db.getConnection();
     try {
-      await connection.beginTransaction();
+      await client.query("BEGIN");
 
-      const {
-        user_id,
-        amount,
-        description,
-        date,
-        category_id = null,
-      } = incomeData;
+      const { user_id, amount, description, date, category_id } = incomeData;
 
-      const [result] = await connection.execute(
+      const { rows } = await client.query(
         `INSERT INTO income 
          (user_id, category_id, amount, description, date) 
-         VALUES (?, ?, ?, ?, ?)`,
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING *`,
         [user_id, category_id, amount, description, date || new Date()]
       );
 
-      await connection.commit();
-      return result;
+      await client.query("COMMIT");
+      return rows[0];
     } catch (error) {
-      await connection.rollback();
+      await client.query("ROLLBACK");
       throw error;
     } finally {
-      connection.release();
+      client.release();
     }
   }
 
   static async delete(id, userId) {
-    const [result] = await db.execute(
+    const { rows } = await db.execute(
       `DELETE FROM income 
-       WHERE income_id = ? AND user_id = ?`,
+       WHERE income_id = $1 AND user_id = $2
+       RETURNING *`,
       [id, userId]
     );
-    return result;
+    return rows[0];
   }
 
   static async getRecentIncome(userId, limit = 10) {
-    const [rows] = await db.execute(
+    const { rows } = await db.execute(
       `SELECT * FROM income 
-       WHERE user_id = ? 
+       WHERE user_id = $1 
        ORDER BY created_at DESC 
-       LIMIT ?`,
+       LIMIT $2`,
       [userId, limit]
     );
     return rows;

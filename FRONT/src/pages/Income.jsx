@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
+import { ring } from "ldrs";
 import { useAuth } from "../context/AuthContext";
+
+// Initialize the loader
+ring.register();
 
 const Income = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -9,11 +13,17 @@ const Income = () => {
   const [incomeDescription, setIncomeDescription] = useState("");
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
-      await Promise.all([fetchIncomeHistory(), fetchCategories()]);
-      setTimeout(() => setIsVisible(true), 100);
+      setIsLoading(true);
+      try {
+        await Promise.all([fetchIncomeHistory(), fetchCategories()]);
+        setTimeout(() => setIsVisible(true), 100);
+      } finally {
+        setIsLoading(false);
+      }
     };
     fetchData();
   }, []);
@@ -91,6 +101,21 @@ const Income = () => {
       alert("An error occurred. Please try again.");
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <l-ring
+          size="40"
+          stroke="5"
+          bg-opacity="0"
+          speed="2"
+          color="rgb(147, 51, 234)"
+        />
+        <span className="mt-4 text-gray-400">Loading income records...</span>
+      </div>
+    );
+  }
 
   return (
     <div

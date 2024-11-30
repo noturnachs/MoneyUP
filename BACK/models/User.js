@@ -5,33 +5,33 @@ class User {
   static async create(userData) {
     const hashedPassword = await bcrypt.hash(userData.password, 10);
 
-    const query = `
-      INSERT INTO users 
-        (name, email, password)
-      VALUES (?, ?, ?)
-    `;
+    const { rows } = await db.execute(
+      `INSERT INTO users 
+         (name, email, password)
+       VALUES ($1, $2, $3)
+       RETURNING *`,
+      [
+        userData.name || `${userData.firstName} ${userData.lastName}`.trim(),
+        userData.email,
+        hashedPassword,
+      ]
+    );
 
-    const [result] = await db.execute(query, [
-      userData.name || `${userData.firstName} ${userData.lastName}`.trim(),
-      userData.email,
-      hashedPassword,
-    ]);
-
-    return result;
+    return rows[0];
   }
 
   static async findByEmail(email) {
     if (!email) return null;
 
-    const [rows] = await db.execute("SELECT * FROM users WHERE email = ?", [
+    const { rows } = await db.execute("SELECT * FROM users WHERE email = $1", [
       email,
     ]);
     return rows[0];
   }
 
   static async findById(id) {
-    const [rows] = await db.execute(
-      "SELECT user_id, name, email, account_threshold FROM users WHERE user_id = ?",
+    const { rows } = await db.execute(
+      "SELECT user_id, name, email, account_threshold FROM users WHERE user_id = $1",
       [id]
     );
     return rows[0];
@@ -42,20 +42,20 @@ class User {
   }
 
   static async updateThreshold(userId, threshold) {
-    const query = `
-      UPDATE users 
-      SET account_threshold = ?,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE user_id = ?
-    `;
-
-    const [result] = await db.execute(query, [threshold, userId]);
-    return result;
+    const { rows } = await db.execute(
+      `UPDATE users 
+       SET account_threshold = $1,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE user_id = $2
+       RETURNING *`,
+      [threshold, userId]
+    );
+    return rows[0];
   }
 
   static async getThreshold(userId) {
-    const [rows] = await db.execute(
-      "SELECT account_threshold FROM users WHERE user_id = ?",
+    const { rows } = await db.execute(
+      "SELECT account_threshold FROM users WHERE user_id = $1",
       [userId]
     );
     return rows[0]?.account_threshold || null;

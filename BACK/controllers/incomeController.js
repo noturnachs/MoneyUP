@@ -3,11 +3,11 @@ const db = require("../config/database");
 
 exports.getAll = async (req, res) => {
   try {
-    const [incomes] = await db.execute(
+    const { rows: incomes } = await db.execute(
       `SELECT i.*, c.name as category_name 
        FROM income i 
        LEFT JOIN categories c ON i.category_id = c.category_id 
-       WHERE i.user_id = ? 
+       WHERE i.user_id = $1 
        ORDER BY i.created_at DESC`,
       [req.user.id]
     );
@@ -42,10 +42,11 @@ exports.create = async (req, res) => {
       });
     }
 
-    const result = await Income.create(incomeData);
+    const income = await Income.create(incomeData);
     res.status(201).json({
       success: true,
-      id: result.insertId,
+      id: income.income_id,
+      income,
       message: "Income created successfully",
     });
   } catch (error) {
@@ -59,7 +60,14 @@ exports.create = async (req, res) => {
 
 exports.delete = async (req, res) => {
   try {
-    await Income.delete(req.params.id, req.user.id);
+    const deletedIncome = await Income.delete(req.params.id, req.user.id);
+    if (!deletedIncome) {
+      return res.status(404).json({
+        success: false,
+        message: "Income not found",
+      });
+    }
+
     res.json({
       success: true,
       message: "Income deleted successfully",
@@ -75,7 +83,7 @@ exports.delete = async (req, res) => {
 
 exports.getRecent = async (req, res) => {
   try {
-    const [incomes] = await db.execute(
+    const { rows: incomes } = await db.execute(
       `SELECT 
         i.income_id as id,
         i.amount,
@@ -84,7 +92,7 @@ exports.getRecent = async (req, res) => {
         c.name as category_name
        FROM income i
        LEFT JOIN categories c ON i.category_id = c.category_id
-       WHERE i.user_id = ?
+       WHERE i.user_id = $1
        ORDER BY i.created_at DESC
        LIMIT 10`,
       [req.user.id]
@@ -105,8 +113,8 @@ exports.getRecent = async (req, res) => {
 
 exports.getTotal = async (req, res) => {
   try {
-    const [result] = await db.execute(
-      "SELECT COALESCE(SUM(amount), 0) as total FROM income WHERE user_id = ?",
+    const { rows: result } = await db.execute(
+      "SELECT COALESCE(SUM(amount), 0) as total FROM income WHERE user_id = $1",
       [req.user.id]
     );
 

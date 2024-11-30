@@ -12,6 +12,7 @@ import {
   ArcElement,
 } from "chart.js";
 import { Line, Bar, Doughnut } from "react-chartjs-2";
+import { ring } from "ldrs";
 
 // Register ChartJS components
 ChartJS.register(
@@ -25,6 +26,9 @@ ChartJS.register(
   Legend,
   ArcElement
 );
+
+// Initialize the loader
+ring.register();
 
 const Analytics = () => {
   const [timeframe, setTimeframe] = useState("monthly");
@@ -55,90 +59,104 @@ const Analytics = () => {
     "#22c55e", // green-500
   ];
 
-  const fetchAnalyticsData = async () => {
-    setIsLoading(true);
-    try {
-      // Fetch summary data
-      const summaryResponse = await fetch(
-        `${process.env.REACT_APP_API_URL}/income/total`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-      const incomeData = await summaryResponse.json();
-
-      const expenseResponse = await fetch(
-        `${process.env.REACT_APP_API_URL}/expenses/total`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-      const expenseData = await expenseResponse.json();
-
-      // Calculate summary data
-      const totalIncome = parseFloat(incomeData.total || 0);
-      const totalExpenses = parseFloat(expenseData.total || 0);
-      const netSavings = totalIncome - totalExpenses;
-      const savingsRate =
-        totalIncome > 0 ? (netSavings / totalIncome) * 100 : 0;
-
-      setSummaryData({
-        totalIncome,
-        totalExpenses,
-        netSavings,
-        savingsRate,
-      });
-
-      // Fetch expenses by category
-      const categoryResponse = await fetch(
-        `${process.env.REACT_APP_API_URL}/expenses/by-category`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-      const categoryData = await categoryResponse.json();
-      setExpensesByCategory(categoryData.categories || []);
-
-      // Fetch income vs expenses data
-      const trendResponse = await fetch(
-        `${process.env.REACT_APP_API_URL}/analytics/income-vs-expenses?timeframe=${timeframe}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-      const trendData = await trendResponse.json();
-      setIncomeVsExpenses(trendData.data || []);
-
-      // Fetch spending insights
-      const insightsResponse = await fetch(
-        `${process.env.REACT_APP_API_URL}/analytics/insights`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-      const insightsData = await insightsResponse.json();
-      setSpendingInsights(insightsData);
-    } catch (error) {
-      console.error("Error fetching analytics data:", error);
-    } finally {
-      setIsLoading(false);
-      setTimeout(() => setIsVisible(true), 100);
-    }
-  };
-
+  // Combine all data fetching into a single useEffect
   useEffect(() => {
+    const fetchAnalyticsData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch all data in parallel
+        const [
+          summaryResponse,
+          expenseResponse,
+          categoryResponse,
+          trendResponse,
+          insightsResponse,
+        ] = await Promise.all([
+          fetch(`${process.env.REACT_APP_API_URL}/income/total`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }),
+          fetch(`${process.env.REACT_APP_API_URL}/expenses/total`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }),
+          fetch(`${process.env.REACT_APP_API_URL}/expenses/by-category`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }),
+          fetch(
+            `${process.env.REACT_APP_API_URL}/analytics/income-vs-expenses?timeframe=${timeframe}`,
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }
+          ),
+          fetch(`${process.env.REACT_APP_API_URL}/analytics/insights`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }),
+        ]);
+
+        const [incomeData, expenseData, categoryData, trendData, insightsData] =
+          await Promise.all([
+            summaryResponse.json(),
+            expenseResponse.json(),
+            categoryResponse.json(),
+            trendResponse.json(),
+            insightsResponse.json(),
+          ]);
+
+        // Calculate and update summary data
+        const totalIncome = parseFloat(incomeData.total || 0);
+        const totalExpenses = parseFloat(expenseData.total || 0);
+        const netSavings = totalIncome - totalExpenses;
+        const savingsRate =
+          totalIncome > 0 ? (netSavings / totalIncome) * 100 : 0;
+
+        setSummaryData({
+          totalIncome,
+          totalExpenses,
+          netSavings,
+          savingsRate,
+        });
+
+        // Update other state
+        if (categoryData.success) {
+          setExpensesByCategory(categoryData.categories || []);
+        }
+
+        setIncomeVsExpenses(trendData.data || []);
+        setSpendingInsights(insightsData);
+      } catch (error) {
+        console.error("Error fetching analytics data:", error);
+      } finally {
+        setIsLoading(false);
+        setTimeout(() => setIsVisible(true), 100);
+      }
+    };
+
     fetchAnalyticsData();
-  }, [timeframe]);
+  }, [timeframe]); // Only re-fetch when timeframe changes
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <l-ring
+          size="40"
+          stroke="5"
+          bg-opacity="0"
+          speed="2"
+          color="rgb(147, 51, 234)"
+        />
+        <span className="mt-4 text-gray-400">Loading analytics...</span>
+      </div>
+    );
+  }
 
   // Format currency
   const formatCurrency = (value) => {
@@ -217,21 +235,13 @@ const Analytics = () => {
   };
 
   const doughnutData = {
-    labels: expensesByCategory.map((cat) => cat.category),
+    labels: expensesByCategory?.map((cat) => cat.category) || [],
     datasets: [
       {
         label: "Expenses",
-        data: expensesByCategory.map((cat) => cat.amount),
-        backgroundColor: [
-          "#8b5cf6", // purple-500
-          "#6366f1", // indigo-500
-          "#3b82f6", // blue-500
-          "#0ea5e9", // sky-500
-          "#06b6d4", // cyan-500
-          "#14b8a6", // teal-500
-          "#10b981", // emerald-500
-          "#22c55e", // green-500
-        ],
+        data: expensesByCategory?.map((cat) => cat.amount) || [],
+        backgroundColor: COLORS,
+        borderColor: COLORS.map((color) => color + "88"), // Add some transparency
         borderWidth: 1,
       },
     ],
@@ -280,6 +290,57 @@ const Analytics = () => {
         fill: true,
       },
     ],
+  };
+
+  // Update the insights rendering section
+  const renderInsightIcon = (type) => {
+    switch (type) {
+      case "increase":
+        return (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z"
+              clipRule="evenodd"
+            />
+          </svg>
+        );
+      case "decrease":
+        return (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 012 0v7.586l2.293-2.293a1 1 0 011.414 0z"
+              clipRule="evenodd"
+            />
+          </svg>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "high":
+        return "bg-red-400";
+      case "low":
+        return "bg-green-400";
+      case "new":
+        return "bg-blue-400";
+      default:
+        return "bg-yellow-400";
+    }
   };
 
   return (
@@ -366,33 +427,7 @@ const Analytics = () => {
                         : "text-green-400"
                     }`}
                   >
-                    {insight.type === "increase" ? (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    ) : (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 012 0v7.586l2.293-2.293a1 1 0 011.414 0z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    )}
+                    {renderInsightIcon(insight.type)}
                     <span className="text-sm">{insight.message}</span>
                   </div>
                 ))
@@ -415,13 +450,9 @@ const Analytics = () => {
                   <div key={index} className="text-sm text-gray-300">
                     <div className="flex items-center gap-2">
                       <span
-                        className={`w-2 h-2 rounded-full ${
-                          insight.status === "high"
-                            ? "bg-red-400"
-                            : insight.status === "low"
-                            ? "bg-green-400"
-                            : "bg-yellow-400"
-                        }`}
+                        className={`w-2 h-2 rounded-full ${getStatusColor(
+                          insight.status
+                        )}`}
                       ></span>
                       {insight.message}
                     </div>
@@ -445,21 +476,21 @@ const Analytics = () => {
                 spendingInsights.unusualSpending.map((insight, index) => (
                   <div
                     key={index}
-                    className="flex items-start gap-2 text-yellow-400"
+                    className={`flex items-start gap-2 ${
+                      insight.type === "increase"
+                        ? "text-red-400"
+                        : "text-green-400"
+                    }`}
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    <span className="text-sm">{insight.message}</span>
+                    {renderInsightIcon(insight.type)}
+                    <span className="text-sm">
+                      {insight.message}
+                      {insight.amount && (
+                        <span className="block text-xs text-gray-400 mt-1">
+                          Amount: {formatCurrency(insight.amount)}
+                        </span>
+                      )}
+                    </span>
                   </div>
                 ))
               ) : (

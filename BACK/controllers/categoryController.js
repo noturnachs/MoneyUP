@@ -59,7 +59,7 @@ exports.create = async (req, res) => {
       });
     }
 
-    const result = await Category.create({
+    const category = await Category.create({
       name,
       type,
       user_id: req.user.id,
@@ -67,7 +67,8 @@ exports.create = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      categoryId: result.insertId,
+      categoryId: category.category_id,
+      category,
     });
   } catch (error) {
     console.error("Error creating category:", error);
@@ -105,10 +106,14 @@ exports.update = async (req, res) => {
       });
     }
 
-    await Category.update(id, req.user.id, { name, type });
+    const updatedCategory = await Category.update(id, req.user.id, {
+      name,
+      type,
+    });
     res.json({
       success: true,
       message: "Category updated successfully",
+      category: updatedCategory,
     });
   } catch (error) {
     console.error("Error updating category:", error);
@@ -139,7 +144,14 @@ exports.delete = async (req, res) => {
       });
     }
 
-    await Category.delete(id, req.user.id);
+    const deletedCategory = await Category.delete(id, req.user.id);
+    if (!deletedCategory) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found",
+      });
+    }
+
     res.json({
       success: true,
       message: "Category deleted successfully",

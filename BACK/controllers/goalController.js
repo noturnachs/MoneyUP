@@ -103,9 +103,9 @@ class GoalController {
 
   static async getPrimaryGoal(req, res) {
     try {
-      const [goals] = await db.execute(
+      const { rows } = await db.execute(
         `SELECT * FROM goals 
-         WHERE user_id = ? 
+         WHERE user_id = $1 
          AND is_completed = false 
          ORDER BY created_at DESC 
          LIMIT 1`,
@@ -114,7 +114,7 @@ class GoalController {
 
       res.json({
         success: true,
-        goals,
+        goal: rows[0] || null,
       });
     } catch (error) {
       console.error("Error fetching primary goal:", error);
@@ -126,45 +126,47 @@ class GoalController {
   }
 
   static async markAccomplished(req, res) {
-    const conn = await db.getConnection();
+    const client = await db.getConnection();
 
     try {
-      await conn.beginTransaction();
+      await client.query("BEGIN");
 
       const { amount } = req.body;
 
       // Mark goal as completed with completion date
-      const [result] = await conn.execute(
+      const { rows } = await client.query(
         `UPDATE goals 
          SET is_completed = true,
-             date_completed = CURRENT_DATE()
-         WHERE goal_id = ? AND user_id = ?`,
+             date_completed = CURRENT_DATE
+         WHERE goal_id = $1 AND user_id = $2
+         RETURNING *`,
         [req.params.id, req.user.id]
       );
 
-      if (result.affectedRows === 0) {
-        await conn.rollback();
+      if (rows.length === 0) {
+        await client.query("ROLLBACK");
         return res.status(404).json({
           success: false,
           message: "Goal not found or unauthorized",
         });
       }
 
-      await conn.commit();
+      await client.query("COMMIT");
 
       res.json({
         success: true,
         message: "Goal marked as accomplished",
+        goal: rows[0],
       });
     } catch (error) {
-      await conn.rollback();
+      await client.query("ROLLBACK");
       console.error("Error marking goal as accomplished:", error);
       res.status(500).json({
         success: false,
         message: "Failed to mark goal as accomplished",
       });
     } finally {
-      conn.release();
+      client.release();
     }
   }
 }

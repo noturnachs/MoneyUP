@@ -3,6 +3,10 @@ import { useAuth } from "../context/AuthContext";
 import { CheckCircleIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { ring } from "ldrs";
+
+// Initialize the loader (needs to be done once)
+ring.register();
 
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString("en-US", {
@@ -134,8 +138,10 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    const fetchInitialData = async () => {
+    const fetchAllData = async () => {
+      setIsLoading(true);
       try {
+        // First check if user has any data
         const [incomeResponse, thresholdResponse] = await Promise.all([
           fetch(`${process.env.REACT_APP_API_URL}/income`, {
             headers: {
@@ -154,44 +160,31 @@ const Dashboard = () => {
           thresholdResponse.json(),
         ]);
 
-        setHasData(incomeData.incomes && incomeData.incomes.length > 0);
+        const userHasData = incomeData.incomes && incomeData.incomes.length > 0;
+        setHasData(userHasData);
+
         if (thresholdData.success) {
           setThreshold(thresholdData.threshold || "");
         }
-      } catch (error) {
-        console.error("Error fetching initial data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
 
-    fetchInitialData();
-  }, []);
-
-  useEffect(() => {
-    if (threshold && balanceData.currentBalance) {
-      const thresholdValue = parseFloat(threshold);
-      const currentBalance = parseFloat(balanceData.currentBalance);
-      const warningThreshold = thresholdValue * 1.1; // Alert when within 10% of threshold
-
-      if (currentBalance <= warningThreshold) {
-        setShowThresholdAlert(true);
-      } else {
-        setShowThresholdAlert(false);
-      }
-    }
-  }, [threshold, balanceData.currentBalance]);
-
-  // Fetch dashboard data when hasData is true
-  useEffect(() => {
-    if (hasData) {
-      const fetchDashboardData = async () => {
-        try {
-          // Fetch all necessary data in parallel
+        if (!userHasData) {
+          // Only fetch categories for initial setup
+          const categoriesResponse = await fetch(
+            `${process.env.REACT_APP_API_URL}/categories/type/income`,
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }
+          );
+          const categoriesData = await categoriesResponse.json();
+          setCategories(categoriesData.categories || []);
+        } else {
+          // Fetch dashboard data if user has transactions
           const [
-            incomeResponse,
-            expenseResponse,
-            primaryGoalResponse,
+            incomeTotalRes,
+            expenseRes,
+            goalRes,
             recentIncomeRes,
             recentExpenseRes,
           ] = await Promise.all([
@@ -223,21 +216,20 @@ const Dashboard = () => {
           ]);
 
           const [
-            incomeData,
+            incomeTotalData,
             expenseData,
-            primaryGoalData,
+            goalData,
             recentIncome,
             recentExpense,
           ] = await Promise.all([
-            incomeResponse.json(),
-            expenseResponse.json(),
-            primaryGoalResponse.json(),
+            incomeTotalRes.json(),
+            expenseRes.json(),
+            goalRes.json(),
             recentIncomeRes.json(),
             recentExpenseRes.json(),
           ]);
 
-          // Update all state at once
-          const totalIncome = parseFloat(incomeData.total || 0);
+          const totalIncome = parseFloat(incomeTotalData.total || 0);
           const totalExpenses = parseFloat(expenseData.total || 0);
 
           setBalanceData({
@@ -247,11 +239,10 @@ const Dashboard = () => {
             expenseChange: 0,
           });
 
-          if (primaryGoalData.success) {
-            setPrimaryGoal(primaryGoalData.goal);
+          if (goalData.success) {
+            setPrimaryGoal(goalData.goal);
           }
 
-          // Combine and sort transactions
           const allTransactions = [
             ...(recentIncome.incomes || []).map((income) => ({
               ...income,
@@ -276,43 +267,27 @@ const Dashboard = () => {
               lastChangeDate: latest.created_at,
             });
           }
-
-          setIsLoading(false);
-          setTimeout(() => setIsVisible(true), 200);
-        } catch (error) {
-          console.error("Error fetching dashboard data:", error);
-          setIsLoading(false);
-          setIsVisible(true);
         }
-      };
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setIsLoading(false);
+        setTimeout(() => setIsVisible(true), 200);
+      }
+    };
 
-      fetchDashboardData();
-    }
-  }, [hasData]);
+    fetchAllData();
+  }, []); // Empty dependency array since we only want this to run once on mount
 
-  // Only fetch categories for initial setup
   useEffect(() => {
-    if (!hasData) {
-      const fetchCategories = async () => {
-        try {
-          const response = await fetch(
-            `${process.env.REACT_APP_API_URL}/categories/type/income`,
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("token")}`,
-              },
-            }
-          );
-          const data = await response.json();
-          setCategories(data.categories || []);
-        } catch (error) {
-          console.error("Error fetching categories:", error);
-        }
-      };
+    if (threshold && balanceData.currentBalance) {
+      const thresholdValue = parseFloat(threshold);
+      const currentBalance = parseFloat(balanceData.currentBalance);
+      const warningThreshold = thresholdValue * 1.1;
 
-      fetchCategories();
+      setShowThresholdAlert(currentBalance <= warningThreshold);
     }
-  }, [hasData]);
+  }, [threshold, balanceData.currentBalance]);
 
   const Pagination = ({
     totalItems,
@@ -400,8 +375,15 @@ const Dashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-gray-400">Loading...</div>
+      <div className="flex flex-col items-center justify-center h-screen">
+        <l-ring
+          size="40"
+          stroke="5"
+          bg-opacity="0"
+          speed="2"
+          color="rgb(147, 51, 234)"
+        />
+        <span className="mt-4 text-gray-400">Loading your dashboard...</span>
       </div>
     );
   }

@@ -5,93 +5,124 @@ const bcrypt = require("bcrypt");
 
 exports.register = async (req, res) => {
   try {
-    const { first_name, last_name, username, email, password } = req.body;
+    const {
+      email,
+      password,
+      username,
+      firstName,
+      lastName,
+      first_name,
+      last_name,
+    } = req.body;
 
-    // Check if email or username already exists
-    const [existingUser] = await db.execute(
-      "SELECT user_id, email, username FROM users WHERE email = ? OR username = ?",
+    const finalFirstName = firstName || first_name;
+    const finalLastName = lastName || last_name;
+
+    console.log("Registration data:", {
+      email,
+      username,
+      firstName: finalFirstName,
+      lastName: finalLastName,
+    });
+
+    if (!email || !password || !username || !finalFirstName || !finalLastName) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required",
+        received: req.body,
+        missing: {
+          email: !email,
+          password: !password,
+          username: !username,
+          firstName: !finalFirstName,
+          lastName: !finalLastName,
+        },
+      });
+    }
+
+    const { rows } = await db.execute(
+      `SELECT COUNT(*) as count 
+       FROM users 
+       WHERE email = $1 OR username = $2`,
       [email, username]
     );
 
-    if (existingUser.length > 0) {
-      // Specify which field is taken
-      if (existingUser[0].email === email) {
-        return res.status(400).json({
-          success: false,
-          message: "Email is already registered",
-        });
-      }
-      if (existingUser[0].username === username) {
-        return res.status(400).json({
-          success: false,
-          message: "Username is already taken",
-        });
-      }
+    if (parseInt(rows[0].count) > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Email or username already exists",
+      });
     }
 
-    // Hash password and create user
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const [result] = await db.execute(
-      "INSERT INTO users (first_name, last_name, username, email, password) VALUES (?, ?, ?, ?, ?)",
-      [first_name, last_name, username, email, hashedPassword]
+    const {
+      rows: [newUser],
+    } = await db.execute(
+      `INSERT INTO users 
+       (email, password, username, first_name, last_name, name) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
+       RETURNING user_id, email, username, first_name, last_name, name`,
+      [
+        email,
+        hashedPassword,
+        username,
+        finalFirstName,
+        finalLastName,
+        `${finalFirstName} ${finalLastName}`,
+      ]
+    );
+
+    const token = jwt.sign(
+      { userId: newUser.user_id },
+      process.env.JWT_SECRET,
+      { expiresIn: "24h" }
     );
 
     res.status(201).json({
       success: true,
-      message: "Registration successful",
+      message: "User registered successfully",
+      token,
+      user: {
+        id: newUser.user_id,
+        email: newUser.email,
+        username: newUser.username,
+        firstName: newUser.first_name,
+        lastName: newUser.last_name,
+        name: newUser.name,
+      },
     });
   } catch (error) {
     console.error("Registration error:", error);
     res.status(500).json({
       success: false,
-      message: "Error during registration",
+      message: "Error registering user",
+      error: error.message,
     });
   }
 };
 
 exports.login = async (req, res) => {
   try {
+    // Get identifier (email or username) and password from request
     const { identifier, password } = req.body;
 
-    // Check if identifier is empty
-    if (!identifier || !password) {
-      return res.status(400).json({
-        success: false,
-        message: identifier
-          ? "Password is required"
-          : "Email or username is required",
-      });
-    }
+    console.log("Login attempt for:", identifier); // Debug log
 
-    // First check if user exists regardless of status
-    const [users] = await db.execute(
-      "SELECT * FROM users WHERE (email = ? OR username = ?)",
-      [identifier, identifier]
+    // Changed query to handle both email and username login
+    const { rows } = await db.execute(
+      `SELECT * FROM users 
+       WHERE (email = $1 OR username = $1) 
+       AND account_status = 'active'`,
+      [identifier]
     );
 
-    if (users.length === 0) {
+    const user = rows[0];
+    if (!user) {
+      console.log("No user found for identifier:", identifier); // Debug log
       return res.status(401).json({
         success: false,
-        message: "No account found with this email/username",
-      });
-    }
-
-    const user = users[0];
-
-    // Check if account is deleted
-    if (user.account_status === "deleted") {
-      return res.status(401).json({
-        success: false,
-        message: "Your account has been deleted as per your request",
-      });
-    }
-
-    // Check if account is active
-    if (user.account_status !== "active") {
-      return res.status(401).json({
-        success: false,
-        message: "Your account is not active",
+        message: "Invalid credentials",
       });
     }
 
@@ -99,137 +130,171 @@ exports.login = async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
+      console.log("Invalid password for user:", identifier); // Debug log
       return res.status(401).json({
         success: false,
-        message: "Incorrect password",
+        message: "Invalid credentials",
       });
     }
 
     // Generate JWT token
-    const token = jwt.sign({ id: user.user_id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ userId: user.user_id }, process.env.JWT_SECRET, {
       expiresIn: "24h",
     });
 
-    // Send response
+    console.log("Login successful for user:", user.email); // Debug log
+
     res.json({
       success: true,
       token,
       user: {
         id: user.user_id,
-        username: user.username,
         email: user.email,
+        username: user.username,
         firstName: user.first_name,
         lastName: user.last_name,
+        name: user.name,
       },
     });
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({
       success: false,
-      message: "Server error during login",
+      message: "An error occurred during login",
+      error: error.message, // Include error message in development
     });
   }
 };
 
 exports.updateProfile = async (req, res) => {
+  const client = await db.getConnection();
+
   try {
-    const { firstName, lastName, email, currentPassword, newPassword } =
-      req.body;
+    await client.query("BEGIN");
+
     const userId = req.user.id;
+    const { email, firstName, lastName, currentPassword, newPassword } =
+      req.body;
 
-    // Start building the query and parameters
-    let updateFields = [];
-    let params = [];
-    let query = "UPDATE users SET ";
+    // First, check if email already exists for another user
+    const emailCheckQuery = `
+      SELECT user_id FROM users 
+      WHERE email = $1 AND user_id != $2`;
 
-    // Add first name if provided
-    if (firstName !== undefined) {
-      updateFields.push("first_name = ?");
-      params.push(firstName);
+    const { rows: existingUsers } = await client.query(emailCheckQuery, [
+      email,
+      userId,
+    ]);
+
+    if (existingUsers.length > 0) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        success: false,
+        message: "Email already in use by another account",
+      });
     }
 
-    // Add last name if provided
-    if (lastName !== undefined) {
-      updateFields.push("last_name = ?");
-      params.push(lastName);
-    }
-
-    // Add email if provided
-    if (email !== undefined) {
-      // Check if email is already taken by another user
-      const [existingUser] = await db.execute(
-        "SELECT user_id FROM users WHERE email = ? AND user_id != ?",
-        [email, userId]
-      );
-
-      if (existingUser.length > 0) {
-        return res.status(400).json({
-          success: false,
-          message: "Email is already in use",
-        });
-      }
-
-      updateFields.push("email = ?");
-      params.push(email);
-    }
-
-    // Handle password update if provided
-    if (newPassword && currentPassword) {
-      // Verify current password
-      const [user] = await db.execute(
-        "SELECT password FROM users WHERE user_id = ?",
-        [userId]
-      );
+    // If password change is requested, verify current password
+    if (currentPassword && newPassword) {
+      const {
+        rows: [user],
+      } = await client.query("SELECT password FROM users WHERE user_id = $1", [
+        userId,
+      ]);
 
       const isPasswordValid = await bcrypt.compare(
         currentPassword,
-        user[0].password
+        user.password
       );
 
       if (!isPasswordValid) {
+        await client.query("ROLLBACK");
         return res.status(400).json({
           success: false,
           message: "Current password is incorrect",
         });
       }
-
-      // Hash new password
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      updateFields.push("password = ?");
-      params.push(hashedPassword);
     }
 
-    // Add user_id to params
-    params.push(userId);
+    // Build update query dynamically based on provided fields
+    let updateFields = [];
+    let queryParams = [];
+    let paramCounter = 1;
 
-    // Complete the query
-    query += updateFields.join(", ") + " WHERE user_id = ?";
+    if (email) {
+      updateFields.push(`email = $${paramCounter}`);
+      queryParams.push(email);
+      paramCounter++;
+    }
 
-    // Execute update
-    await db.execute(query, params);
+    if (firstName) {
+      updateFields.push(`first_name = $${paramCounter}`);
+      queryParams.push(firstName);
+      paramCounter++;
+    }
 
-    // Fetch updated user data
-    const [updatedUser] = await db.execute(
-      "SELECT user_id, email, first_name, last_name FROM users WHERE user_id = ?",
-      [userId]
-    );
+    if (lastName) {
+      updateFields.push(`last_name = $${paramCounter}`);
+      queryParams.push(lastName);
+      paramCounter++;
+    }
+
+    if (newPassword) {
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      updateFields.push(`password = $${paramCounter}`);
+      queryParams.push(hashedPassword);
+      paramCounter++;
+    }
+
+    // Add name update if first_name or last_name changes
+    if (firstName || lastName) {
+      updateFields.push(
+        `name = CONCAT_WS(' ', COALESCE($${paramCounter}, first_name), COALESCE($${
+          paramCounter + 1
+        }, last_name))`
+      );
+      queryParams.push(firstName, lastName);
+      paramCounter += 2;
+    }
+
+    updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+
+    // Add userId as the last parameter
+    queryParams.push(userId);
+
+    const updateQuery = `
+      UPDATE users 
+      SET ${updateFields.join(", ")}
+      WHERE user_id = $${paramCounter}
+      RETURNING user_id, email, first_name, last_name, name`;
+
+    const {
+      rows: [updatedUser],
+    } = await client.query(updateQuery, queryParams);
+
+    await client.query("COMMIT");
 
     res.json({
       success: true,
       message: "Profile updated successfully",
       user: {
-        id: updatedUser[0].user_id,
-        email: updatedUser[0].email,
-        firstName: updatedUser[0].first_name,
-        lastName: updatedUser[0].last_name,
+        id: updatedUser.user_id,
+        email: updatedUser.email,
+        firstName: updatedUser.first_name,
+        lastName: updatedUser.last_name,
+        name: updatedUser.name,
       },
     });
   } catch (error) {
+    await client.query("ROLLBACK");
     console.error("Error updating profile:", error);
     res.status(500).json({
       success: false,
-      message: "Error updating profile",
+      message: "Failed to update profile",
+      error: error.message,
     });
+  } finally {
+    client.release();
   }
 };
 
@@ -330,12 +395,14 @@ exports.getMe = async (req, res) => {
 
 exports.getProfile = async (req, res) => {
   try {
-    const [user] = await db.execute(
-      "SELECT user_id, username, email, first_name, last_name FROM users WHERE user_id = ?",
+    const { rows } = await db.execute(
+      `SELECT user_id, username, email, first_name, last_name 
+       FROM users 
+       WHERE user_id = $1`,
       [req.user.id]
     );
 
-    if (user.length === 0) {
+    if (rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: "User not found",
@@ -345,11 +412,11 @@ exports.getProfile = async (req, res) => {
     res.json({
       success: true,
       user: {
-        id: user[0].user_id,
-        username: user[0].username,
-        email: user[0].email,
-        firstName: user[0].first_name,
-        lastName: user[0].last_name,
+        id: rows[0].user_id,
+        username: rows[0].username,
+        email: rows[0].email,
+        firstName: rows[0].first_name,
+        lastName: rows[0].last_name,
       },
     });
   } catch (error) {
@@ -363,23 +430,43 @@ exports.getProfile = async (req, res) => {
 
 exports.checkAvailability = async (req, res) => {
   try {
-    const { field, value } = req.body;
+    // Check both query parameters and request body
+    const field = req.query.field || req.body.field;
+    const value = req.query.value || req.body.value;
 
-    if (!["username", "email"].includes(field)) {
+    console.log("Query:", req.query); // Debug
+    console.log("Body:", req.body); // Debug
+
+    if (!field || !value) {
       return res.status(400).json({
         success: false,
-        message: "Invalid field",
+        message: "Field and value are required",
+        received: {
+          query: req.query,
+          body: req.body,
+        },
       });
     }
 
-    const [existing] = await db.execute(
-      `SELECT user_id FROM users WHERE ${field} = ?`,
+    if (!["email", "username"].includes(field)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid field specified",
+      });
+    }
+
+    const { rows } = await db.execute(
+      `SELECT COUNT(*) as count 
+       FROM users 
+       WHERE ${field} = $1`,
       [value]
     );
 
+    const exists = parseInt(rows[0].count) > 0;
+
     res.json({
       success: true,
-      available: existing.length === 0,
+      available: !exists,
     });
   } catch (error) {
     console.error("Availability check error:", error);
@@ -392,27 +479,26 @@ exports.checkAvailability = async (req, res) => {
 
 exports.updateThreshold = async (req, res) => {
   try {
-    const { threshold } = req.body;
     const userId = req.user.id;
+    const { threshold } = req.body;
 
-    // Validate threshold value
-    if (
-      threshold !== null &&
-      (isNaN(parseFloat(threshold)) || parseFloat(threshold) < 0)
-    ) {
+    if (threshold === undefined || threshold === null) {
       return res.status(400).json({
         success: false,
-        message: "Threshold must be a positive number or null",
+        message: "Threshold value is required",
       });
     }
 
-    // Update threshold in database
-    const [result] = await db.execute(
-      "UPDATE users SET account_threshold = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
+    // Updated query to use PostgreSQL syntax
+    const { rows } = await db.execute(
+      `UPDATE users 
+       SET account_threshold = $1 
+       WHERE user_id = $2 
+       RETURNING account_threshold`,
       [threshold, userId]
     );
 
-    if (result.affectedRows === 0) {
+    if (rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: "User not found",
@@ -421,14 +507,15 @@ exports.updateThreshold = async (req, res) => {
 
     res.json({
       success: true,
+      threshold: rows[0].account_threshold,
       message: "Threshold updated successfully",
-      threshold: threshold,
     });
   } catch (error) {
     console.error("Error updating threshold:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to update threshold",
+      message: "Error updating threshold",
+      error: error.message,
     });
   }
 };
@@ -437,13 +524,15 @@ exports.getThreshold = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Get user's threshold
-    const [result] = await db.execute(
-      "SELECT account_threshold FROM users WHERE user_id = ?",
+    // Updated query to use PostgreSQL syntax
+    const { rows } = await db.execute(
+      `SELECT account_threshold 
+       FROM users 
+       WHERE user_id = $1`,
       [userId]
     );
 
-    if (!result.length) {
+    if (rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: "User not found",
@@ -452,13 +541,14 @@ exports.getThreshold = async (req, res) => {
 
     res.json({
       success: true,
-      threshold: result[0].account_threshold,
+      threshold: rows[0].account_threshold,
     });
   } catch (error) {
     console.error("Error getting threshold:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to get threshold",
+      message: "Error retrieving threshold",
+      error: error.message,
     });
   }
 };

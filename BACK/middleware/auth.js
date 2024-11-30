@@ -26,24 +26,28 @@ const authMiddleware = async (req, res, next) => {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      const [users] = await db.execute(
-        "SELECT user_id, email, first_name, last_name, username, account_status FROM users WHERE user_id = ? AND account_status = 'active'",
-        [decoded.id]
+      const { rows } = await db.execute(
+        `SELECT user_id, email, first_name, last_name, username, account_status 
+         FROM users 
+         WHERE user_id = $1 
+         AND account_status = 'active'`,
+        [decoded.userId]
       );
 
-      if (users.length === 0) {
+      if (rows.length === 0) {
         return res.status(401).json({
           success: false,
           message: "User not found",
         });
       }
 
+      const user = rows[0];
       req.user = {
-        id: users[0].user_id,
-        email: users[0].email,
-        firstName: users[0].first_name,
-        lastName: users[0].last_name,
-        username: users[0].username,
+        id: user.user_id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        username: user.username,
       };
 
       next();

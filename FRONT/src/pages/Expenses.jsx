@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
+import { ring } from "ldrs";
+
+// Initialize the loader
+ring.register();
 
 const Expenses = () => {
   const [expenses, setExpenses] = useState([]);
@@ -12,6 +16,7 @@ const Expenses = () => {
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [pendingExpense, setPendingExpense] = useState(null);
   const [currentBalance, setCurrentBalance] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -41,6 +46,8 @@ const Expenses = () => {
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -60,6 +67,8 @@ const Expenses = () => {
       }
     } catch (error) {
       console.error("Error fetching expenses:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -86,6 +95,8 @@ const Expenses = () => {
       setCurrentBalance(totalIncome - totalExpenses);
     } catch (error) {
       console.error("Error fetching balance:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -147,6 +158,21 @@ const Expenses = () => {
       alert("An error occurred. Please try again.");
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <l-ring
+          size="40"
+          stroke="5"
+          bg-opacity="0"
+          speed="2"
+          color="rgb(147, 51, 234)"
+        />
+        <span className="mt-4 text-gray-400">Loading expenses...</span>
+      </div>
+    );
+  }
 
   return (
     <div

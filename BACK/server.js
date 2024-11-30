@@ -14,9 +14,9 @@ app.use(express.json());
 const testConnection = async () => {
   try {
     await db.execute("SELECT 1");
-    console.log("Connected to MySQL database");
+    console.log("Connected to PostgreSQL database");
   } catch (error) {
-    console.error("Could not connect to MySQL database:", error);
+    console.error("Could not connect to PostgreSQL database:", error);
     process.exit(1);
   }
 };

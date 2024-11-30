@@ -11,6 +11,7 @@ router.put("/profile", authMiddleware, authController.updateProfile);
 router.delete("/delete-account", authMiddleware, authController.deleteAccount);
 router.get("/me", authMiddleware, authController.getMe);
 router.get("/profile", authMiddleware, authController.getProfile);
+router.get("/check-availability", authController.checkAvailability);
 router.post("/check-availability", authController.checkAvailability);
 
 // Add new threshold routes
