@@ -5,6 +5,7 @@ import {
   CurrencyDollarIcon,
   ChartPieIcon,
   ArrowTrendingUpIcon,
+  BellIcon,
 } from "@heroicons/react/24/outline";
 import { useState, useEffect, useRef } from "react";
 import { motion, useAnimation, useScroll, useInView } from "framer-motion";
@@ -53,6 +54,12 @@ const Landing = () => {
       title: "Financial Goals",
       description:
         "Set savings goals and track your progress towards achieving them.",
+    },
+    {
+      icon: BellIcon,
+      title: "Set Thresholds",
+      description:
+        "Stay on track with spending alerts by setting limits and receiving reminders if you exceed them.",
     },
   ];
 
