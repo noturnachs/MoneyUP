@@ -44,7 +44,7 @@ const Goals = () => {
     targetDate: "",
   });
   const [isEditing, setIsEditing] = useState(false);
-  const [balanceData, setBalanceData] = useState({ currentBalance: 0 });
+  const [balanceData, setBalanceData] = useState({ currentBalance: null });
 
   const fetchGoals = useCallback(async () => {
     try {
@@ -87,7 +87,9 @@ const Goals = () => {
         const totalExpenses = parseFloat(expenseData.total) || 0;
         const currentBalance = totalIncome - totalExpenses;
 
-        setBalanceData({ currentBalance });
+        if (!isNaN(currentBalance)) {
+          setBalanceData({ currentBalance });
+        }
       }
     } catch (error) {
       console.error("Error fetching balance:", error);
@@ -117,7 +119,9 @@ const Goals = () => {
   }, [fetchBalance]);
 
   useEffect(() => {
-    console.log("Balance Data:", balanceData);
+    if (balanceData.currentBalance !== null) {
+      console.log("Balance Data Updated:", balanceData);
+    }
   }, [balanceData]);
 
   useEffect(() => {
@@ -159,14 +163,6 @@ const Goals = () => {
       console.error("Error saving goal:", error);
       alert("Failed to save goal");
     }
-  };
-
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
   };
 
   const handleDelete = async (goalId) => {
@@ -265,7 +261,7 @@ const Goals = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || balanceData.currentBalance === null) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-gray-400">Loading...</div>
@@ -316,20 +312,17 @@ const Goals = () => {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {goals.map((goal) => {
-            // Calculate progress only if the goal is not completed
             const progress = goal.is_completed
-              ? 100 // Always show 100% for completed goals
+              ? 100
               : Math.min(
                   Math.round(
                     (balanceData.currentBalance / parseFloat(goal.amount)) * 100
-                  ) || 0,
+                  ),
                   100
                 );
 
-            // For completed goals, use the goal amount instead of current balance
-            const displayBalance = goal.is_completed
-              ? parseFloat(goal.amount)
-              : balanceData.currentBalance;
+            const isAchievable =
+              balanceData.currentBalance >= parseFloat(goal.amount);
 
             return (
               <motion.div
@@ -338,6 +331,39 @@ const Goals = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-gray-800 rounded-xl border border-gray-700 p-6 space-y-4"
               >
+                {isAchievable && !goal.is_completed && (
+                  <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-3">
+                    <p className="text-green-400 text-sm font-medium flex items-center">
+                      <svg
+                        className="h-5 w-5 mr-2"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      Goal Reached! Click here to mark as accomplished
+                    </p>
+                    <button
+                      onClick={() =>
+                        handleMarkAccomplished(
+                          goal.goal_id,
+                          goal.amount,
+                          goal.description
+                        )
+                      }
+                      className="mt-2 w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      Mark as Accomplished
+                    </button>
+                  </div>
+                )}
+
                 {goal.is_completed && (
                   <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-3 mb-4">
                     <p className="text-green-400 text-sm font-medium flex items-center">
@@ -417,10 +443,12 @@ const Goals = () => {
                     </span>
                     <span className="text-white">
                       ₱
-                      {displayBalance.toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      {balanceData.currentBalance !== null
+                        ? balanceData.currentBalance.toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })
+                        : "0.00"}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
