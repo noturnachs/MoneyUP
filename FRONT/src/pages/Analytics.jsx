@@ -231,16 +231,30 @@ const Analytics = () => {
                     nameKey="category"
                     cx="50%"
                     cy="50%"
-                    outerRadius={120}
-                    label={({ name, percent }) =>
-                      `${name} ${(percent * 100).toFixed(0)}%`
-                    }
-                    labelLine={true}
+                    innerRadius={0}
+                    outerRadius={90}
+                    label={({ name, percent }) => {
+                      if (percent < 0.03) return null; // Hide very small segments
+                      return `${name} ${(percent * 100).toFixed(0)}%`;
+                    }}
+                    labelLine={{
+                      strokeWidth: 1,
+                      stroke: "#6B7280",
+                      length: 10,
+                      angle: 45,
+                    }}
+                    labelStyle={{
+                      fill: "#9CA3AF", // text color
+                      fontSize: "12px",
+                      fontWeight: 500,
+                    }}
                   >
                     {expensesByCategory.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
                         fill={COLORS[index % COLORS.length]}
+                        strokeWidth={1}
+                        stroke="#1F2937" // dark border for contrast
                       />
                     ))}
                   </Pie>
@@ -250,6 +264,8 @@ const Analytics = () => {
                       backgroundColor: "#1F2937",
                       border: "1px solid #374151",
                       borderRadius: "0.5rem",
+                      padding: "8px 12px",
+                      color: "#E5E7EB",
                     }}
                   />
                 </PieChart>

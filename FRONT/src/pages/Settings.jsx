@@ -128,7 +128,9 @@ const Settings = () => {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="bg-gray-800 rounded-xl p-8 border border-gray-700">
-        <h2 className="text-2xl font-bold text-white mb-6">Balance Settings</h2>
+        <h2 className="text-2xl font-bold text-white mb-6">
+          Threshold Settings
+        </h2>
 
         {/* Alert Message */}
         {message.text && (
@@ -152,7 +154,7 @@ const Settings = () => {
           {/* Current Threshold Display */}
           <div className="p-4 bg-gray-700/50 rounded-lg">
             <h3 className="text-gray-300 font-medium mb-2">
-              Current Balance Alert
+              Current Threshold
             </h3>
             <p className="text-gray-400">
               {currentThreshold
