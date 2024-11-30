@@ -1,6 +1,38 @@
 import { useState, useEffect, useCallback } from "react";
-import { PlusIcon, PencilIcon, TrashIcon } from "@heroicons/react/24/outline";
+import {
+  PlusIcon,
+  PencilIcon,
+  TrashIcon,
+  CalendarIcon,
+} from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+
+const datePickerStyles = `
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.8);
+    opacity: 0.6;
+    cursor: pointer;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 0.9;
+  }
+
+  .date-picker-container:focus-within {
+    ring: 2px;
+    ring-purple-500;
+  }
+`;
+
+const formatDate = (date) => {
+  return new Date(date).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+};
 
 const Goals = () => {
   const [goals, setGoals] = useState([]);
@@ -99,17 +131,19 @@ const Goals = () => {
         ? `http://localhost:5000/api/goals/${currentGoal.id}`
         : "http://localhost:5000/api/goals";
 
+      const formattedGoal = {
+        amount: parseFloat(currentGoal.amount),
+        description: currentGoal.description,
+        targetDate: currentGoal.targetDate,
+      };
+
       const response = await fetch(url, {
         method: isEditing ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-        body: JSON.stringify({
-          amount: parseFloat(currentGoal.amount),
-          description: currentGoal.description,
-          targetDate: currentGoal.targetDate,
-        }),
+        body: JSON.stringify(formattedGoal),
       });
 
       if (response.ok) {
@@ -125,6 +159,14 @@ const Goals = () => {
       console.error("Error saving goal:", error);
       alert("Failed to save goal");
     }
+  };
+
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
   };
 
   const handleDelete = async (goalId) => {
@@ -150,11 +192,15 @@ const Goals = () => {
   };
 
   const handleEdit = (goal) => {
+    const formattedDate = goal.target_date
+      ? new Date(goal.target_date).toISOString().substring(0, 10)
+      : new Date().toISOString().substring(0, 10);
+
     setCurrentGoal({
       id: goal.goal_id,
-      amount: goal.amount,
+      amount: goal.amount.toString(),
       description: goal.description,
-      targetDate: new Date(goal.target_date).toISOString().split("T")[0],
+      targetDate: formattedDate,
     });
     setIsEditing(true);
     setShowModal(true);
@@ -185,90 +231,136 @@ const Goals = () => {
         </button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {goals.map((goal) => (
-          <motion.div
-            key={goal.goal_id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-gray-800 rounded-xl border border-gray-700 p-6 space-y-4"
-          >
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-lg font-medium text-white">
-                  {goal.description}
-                </h3>
-                <p className="text-sm text-gray-400">
-                  Target: {new Date(goal.target_date).toLocaleDateString()}
-                </p>
-              </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => handleEdit(goal)}
-                  className="text-gray-400 hover:text-purple-400"
-                >
-                  <PencilIcon className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => handleDelete(goal.goal_id)}
-                  className="text-gray-400 hover:text-red-400"
-                >
-                  <TrashIcon className="h-5 w-5" />
-                </button>
-              </div>
+      {goals.length === 0 ? (
+        <div className="bg-gray-800 rounded-xl border border-gray-700 p-8 text-center">
+          <div className="max-w-sm mx-auto space-y-4">
+            <div className="bg-gray-700/50 rounded-full p-4 w-16 h-16 mx-auto flex items-center justify-center">
+              <PlusIcon className="h-8 w-8 text-purple-400" />
             </div>
+            <h3 className="text-lg font-medium text-white">No Goals Yet</h3>
+            <p className="text-gray-400">
+              Set a goal to start tracking your progress
+            </p>
+            <button
+              onClick={() => {
+                setCurrentGoal({ amount: "", description: "", targetDate: "" });
+                setIsEditing(false);
+                setShowModal(true);
+              }}
+              className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              <PlusIcon className="h-5 w-5 mr-2" />
+              Create Your First Goal
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {goals.map((goal) => {
+            const progress = Math.min(
+              Math.round(
+                (balanceData.currentBalance / parseFloat(goal.amount)) * 100
+              ) || 0,
+              100
+            );
+            const isGoalReached =
+              balanceData.currentBalance >= parseFloat(goal.amount);
 
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Progress</span>
-                <span className="text-white">
-                  {Math.min(
-                    Math.round(
-                      (balanceData.currentBalance / parseFloat(goal.amount)) *
-                        100
-                    ) || 0,
-                    100
-                  )}
-                  %
-                </span>
-              </div>
-              <div className="w-full bg-gray-700 rounded-full h-2">
-                <div
-                  className="bg-purple-500 rounded-full h-2 transition-all duration-500"
-                  style={{
-                    width: `${Math.min(
-                      (balanceData.currentBalance / parseFloat(goal.amount)) *
-                        100 || 0,
-                      100
-                    )}%`,
-                  }}
-                />
-              </div>
+            return (
+              <motion.div
+                key={goal.goal_id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-gray-800 rounded-xl border border-gray-700 p-6 space-y-4"
+              >
+                {isGoalReached && (
+                  <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-3 mb-4">
+                    <p className="text-green-400 text-sm font-medium">
+                      🎉 Congratulations! You've reached your target of ₱
+                      {parseFloat(goal.amount).toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </p>
+                  </div>
+                )}
 
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Current Balance</span>
-                <span className="text-white">
-                  ₱
-                  {(balanceData.currentBalance || 0).toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Target</span>
-                <span className="text-white">
-                  ₱
-                  {parseFloat(goal.amount).toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-lg font-medium text-white">
+                      {goal.description}
+                    </h3>
+                    <p className="text-sm text-gray-400">
+                      Target: {formatDate(goal.target_date)}
+                    </p>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleEdit(goal)}
+                      className="text-gray-400 hover:text-purple-400"
+                    >
+                      <PencilIcon className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(goal.goal_id)}
+                      className="text-gray-400 hover:text-red-400"
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Progress</span>
+                    <span
+                      className={
+                        isGoalReached ? "text-green-400" : "text-white"
+                      }
+                    >
+                      {progress}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div
+                      className={`${
+                        isGoalReached ? "bg-green-500" : "bg-purple-500"
+                      } rounded-full h-2 transition-all duration-500`}
+                      style={{
+                        width: `${progress}%`,
+                      }}
+                    />
+                  </div>
+
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Current Balance</span>
+                    <span className="text-white">
+                      ₱
+                      {(balanceData.currentBalance || 0).toLocaleString(
+                        "en-US",
+                        {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        }
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Target</span>
+                    <span className="text-white">
+                      ₱
+                      {parseFloat(goal.amount).toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Goal Modal */}
       {showModal && (
@@ -322,18 +414,32 @@ const Goals = () => {
                 <label className="block text-sm font-medium text-gray-400 mb-1">
                   Target Date
                 </label>
-                <input
-                  type="date"
-                  required
-                  value={currentGoal.targetDate}
-                  onChange={(e) =>
-                    setCurrentGoal({
-                      ...currentGoal,
-                      targetDate: e.target.value,
-                    })
-                  }
-                  className="block w-full px-3 py-2 border border-gray-700 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <CalendarIcon className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <DatePicker
+                    selected={
+                      currentGoal.targetDate
+                        ? new Date(currentGoal.targetDate)
+                        : null
+                    }
+                    onChange={(date) =>
+                      setCurrentGoal({
+                        ...currentGoal,
+                        targetDate: date.toISOString().split("T")[0],
+                      })
+                    }
+                    dateFormat="yyyy-MM-dd"
+                    minDate={new Date()}
+                    className="pl-10 block w-full px-3 py-2 border border-gray-700 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    wrapperClassName="w-full"
+                    calendarClassName="bg-gray-800 border border-gray-700 text-white rounded-lg shadow-lg"
+                    customInput={
+                      <input className="pl-10 block w-full px-3 py-2 border border-gray-700 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                    }
+                  />
+                </div>
               </div>
 
               <div className="flex space-x-3 pt-4">
@@ -355,6 +461,45 @@ const Goals = () => {
           </div>
         </div>
       )}
+      <style>{datePickerStyles}</style>
+      <style>{`
+        .react-datepicker {
+          font-family: inherit;
+          background-color: #1f2937 !important;
+          border-color: #374151 !important;
+        }
+
+        .react-datepicker__header {
+          background-color: #111827 !important;
+          border-bottom-color: #374151 !important;
+        }
+
+        .react-datepicker__current-month,
+        .react-datepicker__day-name,
+        .react-datepicker__day {
+          color: #fff !important;
+        }
+
+        .react-datepicker__day:hover {
+          background-color: #4c1d95 !important;
+        }
+
+        .react-datepicker__day--selected {
+          background-color: #7c3aed !important;
+        }
+
+        .react-datepicker__day--disabled {
+          color: #6b7280 !important;
+        }
+
+        .react-datepicker__navigation-icon::before {
+          border-color: #fff !important;
+        }
+
+        .react-datepicker__navigation:hover *::before {
+          border-color: #7c3aed !important;
+        }
+      `}</style>
     </div>
   );
 };

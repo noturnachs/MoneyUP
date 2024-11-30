@@ -4,6 +4,14 @@ import { CheckCircleIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 
+const formatDate = (date) => {
+  return new Date(date).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
 const Dashboard = () => {
   const { user } = useAuth();
   const [hasData, setHasData] = useState(false);
@@ -450,6 +458,58 @@ const Dashboard = () => {
       }`}
     >
       {/* Overview Cards */}
+      {/* Threshold Alert */}
+      {showThresholdAlert && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-yellow-900/50 border border-yellow-500/50 rounded-lg p-4 flex items-center justify-between"
+        >
+          <div className="flex items-center space-x-3">
+            <svg
+              className="h-5 w-5 text-yellow-500 animate-pulse"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+            <div>
+              <p className="text-yellow-500 font-medium">Low Balance Alert</p>
+              <p className="text-yellow-500/80 text-sm">
+                Your balance is getting close to your minimum threshold of ₱
+                {parseFloat(threshold).toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowThresholdAlert(false)}
+            className="text-yellow-500/80 hover:text-yellow-500 transition-colors"
+          >
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </motion.div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
           <h3 className="text-gray-400 text-sm font-medium">Net Savings</h3>
@@ -574,19 +634,37 @@ const Dashboard = () => {
 
         {primaryGoal ? (
           <div className="space-y-4">
+            {balanceData.currentBalance >= parseFloat(primaryGoal.amount) && (
+              <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-3">
+                <p className="text-green-400 text-sm font-medium">
+                  🎉 Congratulations! You've reached your target of ₱
+                  {parseFloat(primaryGoal.amount).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </p>
+              </div>
+            )}
+
             <div>
               <h4 className="text-lg font-medium text-white">
                 {primaryGoal.description}
               </h4>
               <p className="text-sm text-gray-400">
-                Target: {new Date(primaryGoal.target_date).toLocaleDateString()}
+                Target: {formatDate(primaryGoal.target_date)}
               </p>
             </div>
 
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Progress</span>
-                <span className="text-white">
+                <span
+                  className={
+                    balanceData.currentBalance >= parseFloat(primaryGoal.amount)
+                      ? "text-green-400"
+                      : "text-white"
+                  }
+                >
                   {Math.min(
                     Math.round(
                       (balanceData.currentBalance / primaryGoal.amount) * 100
@@ -598,7 +676,11 @@ const Dashboard = () => {
               </div>
               <div className="w-full bg-gray-700 rounded-full h-2">
                 <div
-                  className="bg-purple-500 rounded-full h-2 transition-all duration-500"
+                  className={`${
+                    balanceData.currentBalance >= parseFloat(primaryGoal.amount)
+                      ? "bg-green-500"
+                      : "bg-purple-500"
+                  } rounded-full h-2 transition-all duration-500`}
                   style={{
                     width: `${Math.min(
                       (balanceData.currentBalance / primaryGoal.amount) * 100 ||
@@ -639,59 +721,6 @@ const Dashboard = () => {
           </div>
         )}
       </div>
-
-      {/* Threshold Alert */}
-      {showThresholdAlert && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-yellow-900/50 border border-yellow-500/50 rounded-lg p-4 flex items-center justify-between"
-        >
-          <div className="flex items-center space-x-3">
-            <svg
-              className="h-5 w-5 text-yellow-500 animate-pulse"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            <div>
-              <p className="text-yellow-500 font-medium">Low Balance Alert</p>
-              <p className="text-yellow-500/80 text-sm">
-                Your balance is getting close to your minimum threshold of ₱
-                {parseFloat(threshold).toLocaleString("en-US", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setShowThresholdAlert(false)}
-            className="text-yellow-500/80 hover:text-yellow-500 transition-colors"
-          >
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </motion.div>
-      )}
 
       {/* Recent Updates Section */}
       <div className="bg-gray-800 rounded-xl border border-gray-700 mt-6">

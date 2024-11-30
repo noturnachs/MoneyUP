@@ -51,11 +51,15 @@ class GoalController {
       const { id } = req.params;
       const { amount, description, targetDate } = req.body;
 
-      const validation = validateGoal({ amount, description, targetDate });
-      if (!validation.isValid) {
+      const { isValid, errors } = validateGoal({
+        amount,
+        description,
+        targetDate,
+      });
+      if (!isValid) {
         return res.status(400).json({
           success: false,
-          message: validation.errors.join(", "),
+          message: errors.join(", "),
         });
       }
 
