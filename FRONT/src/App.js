@@ -20,6 +20,7 @@ import Settings from "./pages/Settings";
 import Goals from "./pages/Goals";
 import VerifyEmail from "./pages/VerifyEmail";
 import ResetPassword from "./pages/ResetPassword";
+import ForgotPassword from "./pages/ForgotPassword";
 
 // Import components
 import Navbar from "./components/layout/Navbar";
@@ -48,11 +49,13 @@ const AppLayout = ({ children }) => {
     "/register",
     "/verify-email",
     "/reset-password",
+    "/forgot-password",
   ];
   const isPublicRoute =
     publicRoutes.includes(location.pathname) ||
     location.pathname.startsWith("/verify-email") ||
-    location.pathname.startsWith("/reset-password");
+    location.pathname.startsWith("/reset-password") ||
+    location.pathname.startsWith("/forgot-password");
 
   // Show loading spinner while auth is being checked
   if (isLoading) {
@@ -141,6 +144,14 @@ function App() {
             element={
               <PublicRoute>
                 <ResetPassword />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/forgot-password"
+            element={
+              <PublicRoute>
+                <ForgotPassword />
               </PublicRoute>
             }
           />
