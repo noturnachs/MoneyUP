@@ -28,12 +28,12 @@ const Navbar = ({ onMenuClick }) => {
                 <span className=" font-bold text-green-500">
                   {user.username}
                 </span>
-                <button
+                {/* <button
                   onClick={logout}
                   className="text-gray-300 hover:text-white"
                 >
                   Logout
-                </button>
+                </button> */}
               </div>
             ) : (
               <div className="flex items-center space-x-4">
