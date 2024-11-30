@@ -9,8 +9,6 @@ import { useAuth } from "../../context/AuthContext";
 const Navbar = ({ onMenuClick, isCollapsed, setIsSidebarOpen }) => {
   const { user, loading } = useAuth();
 
-  console.log("User data in Navbar:", user);
-
   const displayUsername = user?.username || user?.user?.username || "User";
 
   return (
