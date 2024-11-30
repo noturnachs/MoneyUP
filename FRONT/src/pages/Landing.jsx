@@ -9,6 +9,7 @@ import {
 import { useState, useEffect, useRef } from "react";
 import { motion, useAnimation, useScroll, useInView } from "framer-motion";
 import Pricing from "./Pricing";
+import showcaseImage from "../components/images/showcase.png";
 
 const Landing = () => {
   const { user, logout } = useAuth();
@@ -192,40 +193,73 @@ const Landing = () => {
         initial="hidden"
         animate={heroControls}
         variants={containerVariants}
-        className="relative overflow-hidden"
+        className="relative overflow-hidden py-16 sm:py-24"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <motion.div variants={itemVariants} className="text-center">
-            <h1 className="text-4xl tracking-tight font-extrabold text-white sm:text-5xl md:text-6xl">
-              <motion.span variants={itemVariants} className="block">
-                Take Control of Your
-              </motion.span>
-              <motion.span
-                variants={itemVariants}
-                className="block text-purple-500"
-              >
-                Financial Future
-              </motion.span>
-            </h1>
-            <motion.p
-              variants={itemVariants}
-              className="mt-3 max-w-md mx-auto text-base text-gray-300 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl"
-            >
-              Track expenses, manage budgets, and achieve your financial goals
-              with our intuitive personal finance management tool.
-            </motion.p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="lg:grid lg:grid-cols-12 lg:gap-12">
+            {/* Text Content */}
             <motion.div
               variants={itemVariants}
-              className="mt-10 flex justify-center"
+              className="sm:text-center md:max-w-2xl md:mx-auto lg:col-span-5 lg:text-left"
             >
-              <Link
-                to="/register"
-                className="px-8 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-purple-600 hover:bg-purple-700 md:text-lg transition-colors"
+              <h1 className="text-4xl tracking-tight font-extrabold text-white sm:text-5xl md:text-6xl">
+                <motion.span variants={itemVariants} className="block">
+                  Take Control of
+                </motion.span>
+                <motion.span variants={itemVariants} className="block">
+                  Your
+                </motion.span>
+                <motion.span
+                  variants={itemVariants}
+                  className="block text-purple-500"
+                >
+                  Financial Future
+                </motion.span>
+              </h1>
+              <motion.p
+                variants={itemVariants}
+                className="mt-3 text-base text-gray-300 sm:text-lg md:mt-5 md:text-xl"
               >
-                Start Free Today
-              </Link>
+                Track expenses, manage budgets, and achieve your financial goals
+                with our intuitive personal finance management tool.
+              </motion.p>
+              <motion.div variants={itemVariants} className="mt-10">
+                <Link
+                  to="/register"
+                  className="px-8 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-purple-600 hover:bg-purple-700 md:text-lg transition-colors"
+                >
+                  Start Free Today
+                </Link>
+              </motion.div>
             </motion.div>
-          </motion.div>
+
+            {/* Image */}
+            <motion.div
+              variants={itemVariants}
+              className="mt-12 relative lg:mt-0 lg:col-span-7"
+            >
+              <div className="relative mx-auto rounded-lg shadow-xl lg:max-w-none">
+                <motion.div
+                  className="relative block w-full rounded-lg overflow-hidden"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3, duration: 0.5 }}
+                >
+                  <img
+                    className="w-full h-auto object-cover rounded-lg transform hover:scale-105 transition-transform duration-300"
+                    src={showcaseImage}
+                    alt="Dashboard Preview"
+                    style={{
+                      boxShadow: "0 0 40px rgba(139, 92, 246, 0.15)", // Purple glow
+                      border: "1px solid rgba(139, 92, 246, 0.2)", // Subtle purple border
+                    }}
+                  />
+                  {/* Optional Floating Elements */}
+                  <div className="absolute inset-0 bg-gradient-to-tr from-purple-500/10 to-transparent pointer-events-none"></div>
+                </motion.div>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </motion.div>
 
