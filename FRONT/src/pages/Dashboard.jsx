@@ -538,10 +538,12 @@ const Dashboard = () => {
     >
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-        <div className="bg-gray-800 p-4 sm:p-6 rounded-xl border border-gray-700">
-          <h3 className="text-gray-400 text-sm font-medium">Net Savings</h3>
+        <div className="bg-gray-800 p-3 sm:p-6 rounded-xl border border-gray-700">
+          <h3 className="text-gray-400 text-xs sm:text-sm font-medium">
+            Net Savings
+          </h3>
           <div className="mt-2 space-y-1">
-            <p className="text-xl sm:text-2xl font-bold text-green-500">
+            <p className="text-lg sm:text-2xl font-bold text-green-500">
               ₱
               {(balanceData?.totalBalance || 0).toLocaleString("en-US", {
                 minimumFractionDigits: 2,
@@ -549,7 +551,7 @@ const Dashboard = () => {
               })}
             </p>
             {balanceChanges?.totalChange !== 0 && (
-              <div className="flex items-center text-sm text-green-500">
+              <div className="flex items-center text-xs sm:text-sm text-green-500">
                 <span>
                   +₱
                   {(balanceChanges.totalChange || 0).toLocaleString("en-US", {
@@ -562,11 +564,13 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="bg-gray-800 p-4 sm:p-6 rounded-xl border border-gray-700">
-          <h3 className="text-gray-400 text-sm font-medium">Current Balance</h3>
+        <div className="bg-gray-800 p-3 sm:p-6 rounded-xl border border-gray-700">
+          <h3 className="text-gray-400 text-xs sm:text-sm font-medium">
+            Current Balance
+          </h3>
           <div className="mt-2 space-y-1">
             <p
-              className={`text-xl sm:text-2xl font-bold ${
+              className={`text-lg sm:text-2xl font-bold ${
                 threshold && balanceData?.currentBalance
                   ? balanceData.currentBalance <= parseFloat(threshold) * 1.1 &&
                     balanceData.currentBalance > parseFloat(threshold)
@@ -585,7 +589,7 @@ const Dashboard = () => {
             </p>
             {balanceChanges?.currentChange !== 0 && (
               <div
-                className={`flex items-center text-sm ${
+                className={`flex items-center text-xs sm:text-sm ${
                   balanceChanges.currentChange > 0
                     ? "text-green-500"
                     : "text-red-500"
@@ -618,10 +622,12 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="bg-gray-800 p-4 sm:p-6 rounded-xl border border-gray-700">
-          <h3 className="text-gray-400 text-sm font-medium">Total Expenses</h3>
+        <div className="bg-gray-800 p-3 sm:p-6 rounded-xl border border-gray-700">
+          <h3 className="text-gray-400 text-xs sm:text-sm font-medium">
+            Total Expenses
+          </h3>
           <div className="mt-2 space-y-1">
-            <p className="text-xl sm:text-2xl font-bold text-red-500">
+            <p className="text-lg sm:text-2xl font-bold text-red-500">
               ₱
               {(balanceData?.monthlyExpenses || 0).toLocaleString("en-US", {
                 minimumFractionDigits: 2,
@@ -630,7 +636,7 @@ const Dashboard = () => {
             </p>
             {balanceData?.expenseChange !== 0 && (
               <div
-                className={`flex items-center text-sm ${
+                className={`flex items-center text-xs sm:text-sm ${
                   balanceData?.expenseChange > 0
                     ? "text-red-500"
                     : "text-green-500"
@@ -648,12 +654,14 @@ const Dashboard = () => {
       </div>
 
       {/* Goal Progress Card */}
-      <div className="bg-gray-800 p-4 sm:p-6 rounded-xl border border-gray-700">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 space-y-2 sm:space-y-0">
-          <h3 className="text-gray-400 text-sm font-medium">Savings Goal</h3>
+      <div className="bg-gray-800 p-3 sm:p-6 rounded-xl border border-gray-700">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-4 space-y-2 sm:space-y-0">
+          <h3 className="text-gray-400 text-xs sm:text-sm font-medium">
+            Savings Goal
+          </h3>
           <Link
             to="/goals"
-            className="text-purple-400 hover:text-purple-300 text-sm"
+            className="text-purple-400 hover:text-purple-300 text-xs sm:text-sm"
           >
             {primaryGoal ? "Edit" : "Add Goal"} →
           </Link>
@@ -674,10 +682,10 @@ const Dashboard = () => {
             )}
 
             <div>
-              <h4 className="text-lg font-medium text-white">
+              <h4 className="text-base sm:text-lg font-medium text-white">
                 {primaryGoal.description}
               </h4>
-              <p className="text-sm text-gray-400">
+              <p className="text-xs sm:text-sm text-gray-400">
                 Target: {formatDate(primaryGoal.target_date)}
               </p>
             </div>
@@ -751,14 +759,16 @@ const Dashboard = () => {
 
       {/* Recent Updates Section */}
       <div className="bg-gray-800 rounded-xl border border-gray-700 mt-6">
-        <div className="p-4 sm:p-6 border-b border-gray-700">
+        <div className="p-3 sm:p-6 border-b border-gray-700">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0">
-            <h3 className="text-lg font-medium text-white">Recent Updates</h3>
+            <h3 className="text-base sm:text-lg font-medium text-white">
+              Recent Updates
+            </h3>
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                className="bg-gray-700 border-gray-600 text-white rounded-md text-sm px-3 py-1 w-full sm:w-auto"
+                className="bg-gray-700 border-gray-600 text-white rounded-md text-xs sm:text-sm px-2 sm:px-3 py-1 w-full sm:w-auto"
               >
                 <option value="all">All Transactions</option>
                 <option value="income">Income Only</option>
@@ -768,7 +778,7 @@ const Dashboard = () => {
               <select
                 value={sortOrder}
                 onChange={(e) => setSortOrder(e.target.value)}
-                className="bg-gray-700 border-gray-600 text-white rounded-md text-sm px-3 py-1 w-full sm:w-auto"
+                className="bg-gray-700 border-gray-600 text-white rounded-md text-xs sm:text-sm px-2 sm:px-3 py-1 w-full sm:w-auto"
               >
                 <option value="latest">Latest First</option>
                 <option value="oldest">Oldest First</option>
@@ -781,7 +791,7 @@ const Dashboard = () => {
         <div className="overflow-x-auto max-h-[400px] scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800">
           <table className="w-full">
             <thead className="sticky top-0 bg-gray-800 z-10">
-              <tr className="text-left text-gray-400 text-sm">
+              <tr className="text-left text-gray-400 text-xs sm:text-sm">
                 <th className="p-3 sm:p-4">Type</th>
                 <th className="p-3 sm:p-4">Amount</th>
                 <th className="hidden sm:table-cell p-4">Description</th>
@@ -792,7 +802,7 @@ const Dashboard = () => {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-700">
+            <tbody className="divide-y divide-gray-700 text-xs sm:text-sm">
               {getFilteredTransactions()
                 .slice(
                   (currentPage - 1) * transactionsPerPage,
