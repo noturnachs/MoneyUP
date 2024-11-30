@@ -221,7 +221,7 @@ const Landing = () => {
                 className="mt-3 text-base text-gray-300 sm:text-lg md:mt-5 md:text-xl"
               >
                 Track expenses, manage budgets, and achieve your financial goals
-                with our intuitive personal finance management tool.
+                with our easy-to-use personal finance management tool.
               </motion.p>
               <motion.div variants={itemVariants} className="mt-10">
                 <Link
