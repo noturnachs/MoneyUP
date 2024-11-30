@@ -49,8 +49,6 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      console.log("Login attempt for:", credentials.identifier); // Debug log
-
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/auth/login`,
         {

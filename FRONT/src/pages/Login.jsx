@@ -25,8 +25,6 @@ const Login = () => {
     setIsLoading(true);
     setError("");
 
-    console.log("Login attempt with:", formData); // Debug log
-
     try {
       const result = await login({
         identifier: formData.identifier,
