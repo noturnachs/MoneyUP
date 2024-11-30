@@ -131,7 +131,11 @@ const Analytics = () => {
         }
 
         setIncomeVsExpenses(trendData.data || []);
-        setSpendingInsights(insightsData);
+
+        // Update insights state
+        if (insightsData.success) {
+          setSpendingInsights(insightsData.insights);
+        }
       } catch (error) {
         console.error("Error fetching analytics data:", error);
       } finally {
@@ -142,29 +146,6 @@ const Analytics = () => {
 
     fetchAnalyticsData();
   }, [timeframe]); // Only re-fetch when timeframe changes
-
-  useEffect(() => {
-    const fetchInsights = async () => {
-      try {
-        const response = await fetch(
-          `${process.env.REACT_APP_API_URL}/analytics/insights`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
-        const data = await response.json();
-        if (data.success) {
-          setSpendingInsights(data.insights);
-        }
-      } catch (error) {
-        console.error("Error fetching insights:", error);
-      }
-    };
-
-    fetchInsights();
-  }, [timeframe]); // Add timeframe as dependency to refresh insights when timeframe changes
 
   if (isLoading) {
     return (
