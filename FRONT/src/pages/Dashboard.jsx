@@ -36,6 +36,8 @@ const Dashboard = () => {
   const [threshold, setThreshold] = useState("");
   const [showThresholdAlert, setShowThresholdAlert] = useState(false);
   const [primaryGoal, setPrimaryGoal] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [transactionsPerPage] = useState(5);
 
   const fetchThreshold = useCallback(async () => {
     try {
@@ -245,7 +247,7 @@ const Dashboard = () => {
               type: "expense",
               amount: parseFloat(expense.amount),
             })),
-          ].sort((a, b) => new Date(b.date) - new Date(a.date));
+          ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
           setRecentTransactions(allTransactions);
 
@@ -256,7 +258,7 @@ const Dashboard = () => {
               totalChange: latest.type === "income" ? latest.amount : 0,
               currentChange:
                 latest.type === "income" ? latest.amount : -latest.amount,
-              lastChangeDate: latest.date,
+              lastChangeDate: latest.created_at,
             });
           }
 
@@ -298,6 +300,62 @@ const Dashboard = () => {
       fetchCategories();
     }
   }, [hasData]);
+
+  const Pagination = ({
+    totalItems,
+    itemsPerPage,
+    currentPage,
+    onPageChange,
+  }) => {
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+    return (
+      <div className="flex justify-between items-center px-4 py-3 border-t border-gray-700">
+        <div className="text-sm text-gray-400">
+          Showing {Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}{" "}
+          to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems}{" "}
+          entries
+        </div>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className={`px-3 py-1 rounded-md ${
+              currentPage === 1
+                ? "bg-gray-700 text-gray-400 cursor-not-allowed"
+                : "bg-gray-700 text-white hover:bg-gray-600"
+            }`}
+          >
+            Previous
+          </button>
+          {[...Array(totalPages)].map((_, index) => (
+            <button
+              key={index + 1}
+              onClick={() => onPageChange(index + 1)}
+              className={`px-3 py-1 rounded-md ${
+                currentPage === index + 1
+                  ? "bg-purple-600 text-white"
+                  : "bg-gray-700 text-white hover:bg-gray-600"
+              }`}
+            >
+              {index + 1}
+            </button>
+          ))}
+          <button
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className={`px-3 py-1 rounded-md ${
+              currentPage === totalPages
+                ? "bg-gray-700 text-gray-400 cursor-not-allowed"
+                : "bg-gray-700 text-white hover:bg-gray-600"
+            }`}
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -776,54 +834,66 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
-              {recentTransactions.map((transaction) => (
-                <tr
-                  key={transaction.id}
-                  className="text-gray-300 hover:bg-gray-700/50"
-                >
-                  <td className="p-4">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs ${
-                        transaction.type === "income"
-                          ? "text-green-500 bg-green-500/10"
-                          : "text-red-500 bg-red-500/10"
-                      }`}
-                    >
-                      {transaction.type}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <span
-                      className={
-                        transaction.type === "income"
-                          ? "text-green-500"
-                          : "text-red-500"
-                      }
-                    >
-                      {transaction.type === "income" ? "+" : "-"}₱
-                      {parseFloat(transaction.amount).toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </span>
-                  </td>
-                  <td className="p-4 hidden md:table-cell">
-                    {transaction.description}
-                  </td>
-                  <td className="p-4 hidden md:table-cell">
-                    {transaction.category_name || "-"}
-                  </td>
-                  <td className="p-4">
-                    {new Date(transaction.date).toLocaleDateString()}
-                    <span className="text-gray-500 text-sm ml-2">
-                      {new Date(transaction.date).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {recentTransactions
+                .slice(
+                  (currentPage - 1) * transactionsPerPage,
+                  currentPage * transactionsPerPage
+                )
+                .map((transaction) => (
+                  <tr
+                    key={transaction.id}
+                    className="text-gray-300 hover:bg-gray-700/50"
+                  >
+                    <td className="p-4">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${
+                          transaction.type === "income"
+                            ? "text-green-500 bg-green-500/10"
+                            : "text-red-500 bg-red-500/10"
+                        }`}
+                      >
+                        {transaction.type}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <span
+                        className={
+                          transaction.type === "income"
+                            ? "text-green-500"
+                            : "text-red-500"
+                        }
+                      >
+                        {transaction.type === "income" ? "+" : "-"}₱
+                        {parseFloat(transaction.amount).toLocaleString(
+                          "en-US",
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }
+                        )}
+                      </span>
+                    </td>
+                    <td className="p-4 hidden md:table-cell">
+                      {transaction.description}
+                    </td>
+                    <td className="p-4 hidden md:table-cell">
+                      {transaction.category_name || "-"}
+                    </td>
+                    <td className="p-4">
+                      {new Date(transaction.created_at).toLocaleDateString()}
+                      <span className="text-gray-500 text-sm ml-2">
+                        {new Date(transaction.created_at).toLocaleTimeString(
+                          [],
+                          {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: true,
+                          }
+                        )}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               {recentTransactions.length === 0 && (
                 <tr>
                   <td colSpan="5" className="p-4 text-center text-gray-500">
@@ -834,6 +904,14 @@ const Dashboard = () => {
             </tbody>
           </table>
         </div>
+        {recentTransactions.length > 0 && (
+          <Pagination
+            totalItems={recentTransactions.length}
+            itemsPerPage={transactionsPerPage}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+          />
+        )}
       </div>
     </div>
   );

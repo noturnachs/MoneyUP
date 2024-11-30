@@ -78,7 +78,7 @@ exports.getAll = async (req, res) => {
        FROM expenses e 
        LEFT JOIN categories c ON e.category_id = c.category_id 
        WHERE e.user_id = ? 
-       ORDER BY e.date DESC`,
+       ORDER BY e.created_at DESC`,
       [req.user.id]
     );
 
@@ -143,12 +143,12 @@ exports.getRecent = async (req, res) => {
         e.expense_id as id,
         e.amount,
         e.description,
-        e.date,
+        e.created_at,
         c.name as category_name
        FROM expenses e
        LEFT JOIN categories c ON e.category_id = c.category_id
        WHERE e.user_id = ?
-       ORDER BY e.date DESC
+       ORDER BY e.created_at DESC
        LIMIT 10`,
       [req.user.id]
     );

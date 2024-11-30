@@ -3,13 +3,18 @@ const db = require("../config/database");
 
 exports.getAll = async (req, res) => {
   try {
-    const incomes = await Income.findByUserId(req.user.id);
+    const [incomes] = await db.execute(
+      `SELECT i.*, c.name as category_name 
+       FROM income i 
+       LEFT JOIN categories c ON i.category_id = c.category_id 
+       WHERE i.user_id = ? 
+       ORDER BY i.created_at DESC`,
+      [req.user.id]
+    );
+
     res.json({
       success: true,
-      incomes: incomes.map((income) => ({
-        ...income,
-        amount: parseFloat(income.amount),
-      })),
+      incomes,
     });
   } catch (error) {
     console.error("Error fetching income:", error);
@@ -75,30 +80,19 @@ exports.getRecent = async (req, res) => {
         i.income_id as id,
         i.amount,
         i.description,
-        i.date,
-        c.name as category_name,
-        (SELECT COALESCE(SUM(amount), 0) 
-         FROM income 
-         WHERE user_id = ? AND date <= i.date) as balance_after,
-        (SELECT COALESCE(SUM(amount), 0) 
-         FROM income 
-         WHERE user_id = ? AND date < i.date) as balance_before
+        i.created_at,
+        c.name as category_name
        FROM income i
        LEFT JOIN categories c ON i.category_id = c.category_id
        WHERE i.user_id = ?
-       ORDER BY i.date DESC
+       ORDER BY i.created_at DESC
        LIMIT 10`,
-      [req.user.id, req.user.id, req.user.id]
+      [req.user.id]
     );
 
     res.json({
       success: true,
-      incomes: incomes.map((income) => ({
-        ...income,
-        amount: parseFloat(income.amount),
-        balance_after: parseFloat(income.balance_after),
-        balance_before: parseFloat(income.balance_before),
-      })),
+      incomes,
     });
   } catch (error) {
     console.error("Error fetching recent income:", error);

@@ -5,7 +5,7 @@ class Expense {
     const [rows] = await db.execute(
       `SELECT * FROM expenses 
        WHERE user_id = ? 
-       ORDER BY date DESC`,
+       ORDER BY created_at DESC`,
       [userId]
     );
     return rows;
@@ -53,7 +53,7 @@ class Expense {
     const [rows] = await db.execute(
       `SELECT * FROM expenses 
        WHERE user_id = ? 
-       ORDER BY date DESC 
+       ORDER BY created_at DESC 
        LIMIT ?`,
       [userId, limit]
     );

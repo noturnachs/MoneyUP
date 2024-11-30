@@ -3,11 +3,9 @@ const db = require("../config/database");
 class Income {
   static async findByUserId(userId) {
     const [rows] = await db.execute(
-      `SELECT i.*, c.name as category_name 
-       FROM income i
-       LEFT JOIN categories c ON i.category_id = c.category_id
-       WHERE i.user_id = ? 
-       ORDER BY i.date DESC`,
+      `SELECT * FROM income 
+       WHERE user_id = ? 
+       ORDER BY created_at DESC`,
       [userId]
     );
     return rows;
@@ -52,15 +50,13 @@ class Income {
     return result;
   }
 
-  static async getRecentIncome(userId) {
+  static async getRecentIncome(userId, limit = 10) {
     const [rows] = await db.execute(
-      `SELECT i.*, c.name as category_name 
-       FROM income i
-       LEFT JOIN categories c ON i.category_id = c.category_id
-       WHERE i.user_id = ? 
-       ORDER BY i.date DESC 
-       LIMIT 10`,
-      [userId]
+      `SELECT * FROM income 
+       WHERE user_id = ? 
+       ORDER BY created_at DESC 
+       LIMIT ?`,
+      [userId, limit]
     );
     return rows;
   }

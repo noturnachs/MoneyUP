@@ -261,7 +261,14 @@ const Expenses = () => {
                       <td className="p-4">{expense.description}</td>
                       <td className="p-4">{expense.category_name || "-"}</td>
                       <td className="p-4">
-                        {new Date(expense.date).toLocaleDateString()}
+                        {new Date(expense.created_at).toLocaleDateString()}
+                        <span className="text-gray-500 text-sm ml-2">
+                          {new Date(expense.created_at).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: true,
+                          })}
+                        </span>
                       </td>
                     </tr>
                   ))}
