@@ -8,7 +8,7 @@ const Settings = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState({ type: "", text: "" });
 
-  // Fetch current threshold
+  // Single useEffect for initial fetch
   useEffect(() => {
     const fetchThreshold = async () => {
       try {
@@ -37,7 +37,7 @@ const Settings = () => {
     };
 
     fetchThreshold();
-  }, []);
+  }, []); // Empty dependency array means this only runs once on mount
 
   const handleUpdateThreshold = async (e) => {
     e.preventDefault();

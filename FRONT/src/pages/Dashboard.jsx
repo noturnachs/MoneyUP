@@ -41,25 +41,6 @@ const Dashboard = () => {
   const [sortOrder, setSortOrder] = useState("latest");
   const [filterType, setFilterType] = useState("all");
 
-  const fetchThreshold = useCallback(async () => {
-    try {
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/auth/threshold`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-      const data = await response.json();
-      if (data.success) {
-        setThreshold(data.threshold || "");
-      }
-    } catch (error) {
-      console.error("Error fetching threshold:", error);
-    }
-  }, []);
-
   const handleThresholdSubmit = async (thresholdValue) => {
     try {
       const response = await fetch(
@@ -153,11 +134,39 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    if (hasData) {
-      fetchThreshold();
-      fetchPrimaryGoal();
-    }
-  }, [hasData, fetchThreshold, fetchPrimaryGoal]);
+    const fetchDashboardData = async () => {
+      try {
+        const [primaryGoalResponse, thresholdResponse] = await Promise.all([
+          fetch(`${process.env.REACT_APP_API_URL}/goals/primary`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }),
+          fetch(`${process.env.REACT_APP_API_URL}/auth/threshold`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }),
+        ]);
+
+        const [primaryGoalData, thresholdData] = await Promise.all([
+          primaryGoalResponse.json(),
+          thresholdResponse.json(),
+        ]);
+
+        if (primaryGoalData.success) {
+          setPrimaryGoal(primaryGoalData.goal);
+        }
+        if (thresholdData.success) {
+          setThreshold(thresholdData.threshold || "");
+        }
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
 
   useEffect(() => {
     if (threshold && balanceData.currentBalance) {
@@ -677,6 +686,89 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Threshold Alert */}
+      {showThresholdAlert && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`border rounded-xl p-4 flex items-center justify-between ${
+            balanceData.currentBalance <= parseFloat(threshold)
+              ? "bg-red-900/30 border-red-500/30" // Below threshold
+              : "bg-orange-900/30 border-orange-500/30" // Close to threshold
+          }`}
+        >
+          <div className="flex items-center space-x-3">
+            <svg
+              className={`h-6 w-6 ${
+                balanceData.currentBalance <= parseFloat(threshold)
+                  ? "text-red-400"
+                  : "text-orange-400"
+              }`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+            <div>
+              <p
+                className={`font-medium ${
+                  balanceData.currentBalance <= parseFloat(threshold)
+                    ? "text-red-400"
+                    : "text-orange-400"
+                }`}
+              >
+                {balanceData.currentBalance <= parseFloat(threshold)
+                  ? "Low Balance Warning"
+                  : "Low Balance Alert"}
+              </p>
+              <p
+                className={`text-sm ${
+                  balanceData.currentBalance <= parseFloat(threshold)
+                    ? "text-red-300"
+                    : "text-orange-300"
+                }`}
+              >
+                {balanceData.currentBalance <= parseFloat(threshold)
+                  ? `Your balance has fallen below your minimum threshold of ₱${parseFloat(
+                      threshold
+                    ).toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}`
+                  : `Your balance is getting close to your minimum threshold of ₱${parseFloat(
+                      threshold
+                    ).toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}`}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowThresholdAlert(false)}
+            className={`${
+              balanceData.currentBalance <= parseFloat(threshold)
+                ? "text-red-400 hover:text-red-300"
+                : "text-orange-400 hover:text-orange-300"
+            }`}
+          >
+            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fillRule="evenodd"
+                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        </motion.div>
+      )}
 
       {/* Goal Progress Card */}
       <div className="bg-gray-800 p-3 sm:p-6 rounded-xl border border-gray-700">
