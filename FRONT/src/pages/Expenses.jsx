@@ -248,7 +248,7 @@ const Expenses = () => {
                 <tbody className="divide-y divide-gray-700">
                   {expenses.map((expense) => (
                     <tr
-                      key={expense.id}
+                      key={expense.expense_id || expense.id}
                       className="text-gray-300 hover:bg-gray-700/50 text-xs sm:text-sm"
                     >
                       <td className="p-3 sm:p-4 whitespace-nowrap w-1/3 sm:w-auto">
@@ -269,15 +269,16 @@ const Expenses = () => {
                             {expense.category_name || "-"}
                           </span>
                           <span className="text-gray-500 text-xs mt-1 sm:hidden">
-                            {new Date(expense.created_at).toLocaleDateString()}{" "}
-                            {new Date(expense.created_at).toLocaleTimeString(
-                              [],
-                              {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                hour12: true,
-                              }
-                            )}
+                            {new Date(
+                              expense.created_at || expense.date
+                            ).toLocaleDateString()}{" "}
+                            {new Date(
+                              expense.created_at || expense.date
+                            ).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: true,
+                            })}
                           </span>
                         </div>
                       </td>
@@ -287,17 +288,18 @@ const Expenses = () => {
                       <td className="hidden sm:table-cell p-4">
                         <div className="flex flex-col sm:flex-row sm:items-center">
                           <span>
-                            {new Date(expense.created_at).toLocaleDateString()}
+                            {new Date(
+                              expense.created_at || expense.date
+                            ).toLocaleDateString()}
                           </span>
                           <span className="text-gray-500 text-xs sm:ml-2">
-                            {new Date(expense.created_at).toLocaleTimeString(
-                              [],
-                              {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                hour12: true,
-                              }
-                            )}
+                            {new Date(
+                              expense.created_at || expense.date
+                            ).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: true,
+                            })}
                           </span>
                         </div>
                       </td>

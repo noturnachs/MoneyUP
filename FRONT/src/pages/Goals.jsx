@@ -45,6 +45,8 @@ const Goals = () => {
   });
   const [isEditing, setIsEditing] = useState(false);
   const [balanceData, setBalanceData] = useState({ currentBalance: null });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [goalToDelete, setGoalToDelete] = useState(null);
 
   const fetchGoals = useCallback(async () => {
     try {
@@ -118,16 +120,6 @@ const Goals = () => {
     };
   }, [fetchBalance]);
 
-  useEffect(() => {
-    if (balanceData.currentBalance !== null) {
-      console.log("Balance Data Updated:", balanceData);
-    }
-  }, [balanceData]);
-
-  useEffect(() => {
-    console.log("Goals:", goals);
-  }, [goals]);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -165,25 +157,30 @@ const Goals = () => {
     }
   };
 
-  const handleDelete = async (goalId) => {
-    if (window.confirm("Are you sure you want to delete this goal?")) {
-      try {
-        const response = await fetch(
-          `http://localhost:5000/api/goals/${goalId}`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
+  const handleDelete = (goal) => {
+    setGoalToDelete(goal);
+    setShowDeleteModal(true);
+  };
 
-        if (response.ok) {
-          fetchGoals();
+  const confirmDelete = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/goals/${goalToDelete.goal_id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         }
-      } catch (error) {
-        console.error("Error deleting goal:", error);
+      );
+
+      if (response.ok) {
+        fetchGoals();
+        setShowDeleteModal(false);
+        setGoalToDelete(null);
       }
+    } catch (error) {
+      console.error("Error deleting goal:", error);
     }
   };
 
@@ -329,9 +326,30 @@ const Goals = () => {
                 key={goal.goal_id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-gray-800 rounded-xl border border-gray-700 p-6 space-y-4"
+                className="bg-gray-800 rounded-xl border border-gray-700 p-6 space-y-4 relative"
               >
-                {isAchievable && !goal.is_completed && (
+                {goal.is_completed ? (
+                  // Accomplished banner for completed goals
+                  <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-3 mb-4">
+                    <p className="text-green-400 text-sm font-medium flex items-center">
+                      <svg
+                        className="h-5 w-5 mr-2"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      Goal Accomplished!
+                    </p>
+                  </div>
+                ) : isAchievable && !goal.is_completed ? (
+                  // Mark as accomplished button for achievable but not completed goals
                   <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-3">
                     <p className="text-green-400 text-sm font-medium flex items-center">
                       <svg
@@ -362,33 +380,7 @@ const Goals = () => {
                       Mark as Accomplished
                     </button>
                   </div>
-                )}
-
-                {goal.is_completed && (
-                  <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-3 mb-4">
-                    <p className="text-green-400 text-sm font-medium flex items-center">
-                      <svg
-                        className="h-5 w-5 mr-2"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      Goal Accomplished!
-                      {goal.date_completed && (
-                        <span className="ml-2 text-gray-400">
-                          (Completed: {formatDate(goal.date_completed)})
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                )}
+                ) : null}
 
                 <div className="flex justify-between items-start">
                   <div>
@@ -400,14 +392,16 @@ const Goals = () => {
                     </p>
                   </div>
                   <div className="flex space-x-2">
+                    {!goal.is_completed && (
+                      <button
+                        onClick={() => handleEdit(goal)}
+                        className="text-gray-400 hover:text-purple-400"
+                      >
+                        <PencilIcon className="h-5 w-5" />
+                      </button>
+                    )}
                     <button
-                      onClick={() => handleEdit(goal)}
-                      className="text-gray-400 hover:text-purple-400"
-                    >
-                      <PencilIcon className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(goal.goal_id)}
+                      onClick={() => handleDelete(goal)}
                       className="text-gray-400 hover:text-red-400"
                     >
                       <TrashIcon className="h-5 w-5" />
@@ -432,23 +426,18 @@ const Goals = () => {
                         goal.is_completed ? "bg-green-500" : "bg-purple-500"
                       } rounded-full h-2 transition-all duration-500`}
                       style={{
-                        width: `${progress}%`,
+                        width: `${Math.min(progress, 100)}%`,
                       }}
                     />
                   </div>
-
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">
-                      {goal.is_completed ? "Final Balance" : "Current Balance"}
-                    </span>
+                    <span className="text-gray-400">Current Balance</span>
                     <span className="text-white">
                       ₱
-                      {balanceData.currentBalance !== null
-                        ? balanceData.currentBalance.toLocaleString("en-US", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })
-                        : "0.00"}
+                      {balanceData.currentBalance.toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
@@ -567,6 +556,103 @@ const Goals = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 sm:p-0">
+          <div className="relative transform overflow-hidden rounded-lg bg-gray-800 border border-gray-700 px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+            <div className="absolute right-0 top-0 hidden pr-4 pt-4 sm:block">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setGoalToDelete(null);
+                }}
+                className="rounded-md text-gray-400 hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <span className="sr-only">Close</span>
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="1.5"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="sm:flex sm:items-start">
+              <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-900/20 sm:mx-0 sm:h-10 sm:w-10">
+                <svg
+                  className="h-6 w-6 text-red-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="1.5"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                  />
+                </svg>
+              </div>
+              <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
+                <h3 className="text-lg font-semibold leading-6 text-white">
+                  Delete Goal
+                </h3>
+                <div className="mt-2">
+                  <p className="text-sm text-gray-400">
+                    Are you sure you want to delete this goal? This action
+                    cannot be undone.
+                  </p>
+                  <div className="mt-3 p-3 bg-gray-700/50 rounded-lg border border-gray-600">
+                    <p className="text-sm font-medium text-white">
+                      {goalToDelete?.description}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Target Amount: ₱
+                      {parseFloat(goalToDelete?.amount || 0).toLocaleString(
+                        "en-US",
+                        {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        }
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse gap-3">
+              <button
+                type="button"
+                onClick={confirmDelete}
+                className="inline-flex w-full justify-center rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:w-auto"
+              >
+                Delete Goal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setGoalToDelete(null);
+                }}
+                className="mt-3 inline-flex w-full justify-center rounded-lg bg-gray-700 px-3 py-2 text-sm font-semibold text-gray-300 shadow-sm ring-1 ring-inset ring-gray-600 hover:bg-gray-600 sm:mt-0 sm:w-auto"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{datePickerStyles}</style>
       <style>{`
         .react-datepicker {

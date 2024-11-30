@@ -307,52 +307,62 @@ const Dashboard = () => {
     totalItems,
     itemsPerPage,
     currentPage,
-    onPageChange,
+    setCurrentPage,
   }) => {
     const totalPages = Math.ceil(totalItems / itemsPerPage);
 
+    if (totalPages <= 1) return null;
+
     return (
-      <div className="flex justify-between items-center px-4 py-3 border-t border-gray-700">
+      <div className="flex items-center justify-between px-4 py-3">
         <div className="text-sm text-gray-400">
-          Showing {Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)}{" "}
-          to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems}{" "}
-          entries
+          Showing 1 to {Math.min(itemsPerPage, totalItems)} of {totalItems}{" "}
+          results
         </div>
-        <div className="flex space-x-2">
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => onPageChange(currentPage - 1)}
+            onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
             disabled={currentPage === 1}
-            className={`px-3 py-1 rounded-md ${
-              currentPage === 1
-                ? "bg-gray-700 text-gray-400 cursor-not-allowed"
-                : "bg-gray-700 text-white hover:bg-gray-600"
-            }`}
+            className="p-2 text-gray-400 hover:text-white disabled:text-gray-600"
           >
-            Previous
+            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fillRule="evenodd"
+                d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
+                clipRule="evenodd"
+              />
+            </svg>
           </button>
-          {[...Array(totalPages)].map((_, index) => (
+
+          {[...Array(totalPages)].map((_, idx) => (
             <button
-              key={index + 1}
-              onClick={() => onPageChange(index + 1)}
-              className={`px-3 py-1 rounded-md ${
-                currentPage === index + 1
-                  ? "bg-purple-600 text-white"
-                  : "bg-gray-700 text-white hover:bg-gray-600"
-              }`}
+              key={idx + 1}
+              onClick={() => setCurrentPage(idx + 1)}
+              className={`w-8 h-8 rounded-md text-sm font-medium transition-colors
+                ${
+                  currentPage === idx + 1
+                    ? "bg-purple-600 text-white"
+                    : "text-gray-400 hover:text-white"
+                }`}
             >
-              {index + 1}
+              {idx + 1}
             </button>
           ))}
+
           <button
-            onClick={() => onPageChange(currentPage + 1)}
+            onClick={() =>
+              setCurrentPage((page) => Math.min(page + 1, totalPages))
+            }
             disabled={currentPage === totalPages}
-            className={`px-3 py-1 rounded-md ${
-              currentPage === totalPages
-                ? "bg-gray-700 text-gray-400 cursor-not-allowed"
-                : "bg-gray-700 text-white hover:bg-gray-600"
-            }`}
+            className="p-2 text-gray-400 hover:text-white disabled:text-gray-600"
           >
-            Next
+            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fillRule="evenodd"
+                d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+                clipRule="evenodd"
+              />
+            </svg>
           </button>
         </div>
       </div>
@@ -873,6 +883,12 @@ const Dashboard = () => {
           </table>
         </div>
       </div>
+      <Pagination
+        totalItems={getFilteredTransactions().length}
+        itemsPerPage={transactionsPerPage}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+      />
     </div>
   );
 };

@@ -183,43 +183,91 @@ const Income = () => {
           </div>
         )}
 
-        {/* Income History */}
+        {/* Income Table */}
         <div className="bg-gray-800 rounded-xl border border-gray-700">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left text-gray-400 text-sm">
-                  <th className="p-4">Amount</th>
-                  <th className="p-4">Description</th>
-                  <th className="p-4">Category</th>
-                  <th className="p-4">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-700">
-                {incomeHistory.map((income) => (
-                  <tr
-                    key={income.id}
-                    className="text-gray-300 hover:bg-gray-700/50"
-                  >
-                    <td className="p-4">
-                      <span className="text-green-500">
-                        +₱
-                        {parseFloat(income.amount).toLocaleString("en-US", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </span>
-                    </td>
-                    <td className="p-4">{income.description}</td>
-                    <td className="p-4">{income.category_name || "-"}</td>
-                    <td className="p-4">
-                      {new Date(income.date).toLocaleDateString()}
-                    </td>
+          {incomeHistory.length > 0 ? (
+            <div className="overflow-x-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="text-left text-gray-400 text-xs sm:text-sm">
+                    <th className="p-3 sm:p-4 whitespace-nowrap w-1/3 sm:w-auto">
+                      Amount
+                    </th>
+                    <th className="p-3 sm:p-4 w-2/3 sm:w-auto">Description</th>
+                    <th className="hidden sm:table-cell p-4">Category</th>
+                    <th className="hidden sm:table-cell p-4">Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-gray-700">
+                  {incomeHistory.map((income) => (
+                    <tr
+                      key={income.income_id || income.id}
+                      className="text-gray-300 hover:bg-gray-700/50 text-xs sm:text-sm"
+                    >
+                      <td className="p-3 sm:p-4 whitespace-nowrap w-1/3 sm:w-auto">
+                        <span className="text-green-500">
+                          +₱
+                          {parseFloat(income.amount).toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      </td>
+                      <td className="p-3 sm:p-4 w-2/3 sm:w-auto">
+                        <div className="flex flex-col">
+                          <span className="text-gray-300">
+                            {income.description}
+                          </span>
+                          <span className="text-gray-500 text-xs mt-1 sm:hidden">
+                            {income.category_name || "-"}
+                          </span>
+                          <span className="text-gray-500 text-xs mt-1 sm:hidden">
+                            {new Date(
+                              income.created_at || income.date
+                            ).toLocaleDateString()}{" "}
+                            {new Date(
+                              income.created_at || income.date
+                            ).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: true,
+                            })}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="hidden sm:table-cell p-4">
+                        {income.category_name || "-"}
+                      </td>
+                      <td className="hidden sm:table-cell p-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center">
+                          <span>
+                            {new Date(
+                              income.created_at || income.date
+                            ).toLocaleDateString()}
+                          </span>
+                          <span className="text-gray-500 text-xs sm:ml-2">
+                            {new Date(
+                              income.created_at || income.date
+                            ).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: true,
+                            })}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-32">
+              <p className="text-gray-400 text-sm sm:text-base">
+                No income records found
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
