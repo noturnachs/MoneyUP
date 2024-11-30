@@ -9,10 +9,17 @@ const Expenses = () => {
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [isVisible, setIsVisible] = useState(false);
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [pendingExpense, setPendingExpense] = useState(null);
+  const [currentBalance, setCurrentBalance] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
-      await Promise.all([fetchExpenses(), fetchCategories()]);
+      await Promise.all([
+        fetchExpenses(),
+        fetchCategories(),
+        fetchCurrentBalance(),
+      ]);
       setTimeout(() => setIsVisible(true), 100);
     };
     fetchData();
@@ -53,6 +60,32 @@ const Expenses = () => {
     }
   };
 
+  const fetchCurrentBalance = async () => {
+    try {
+      const [incomeResponse, expenseResponse] = await Promise.all([
+        fetch("http://localhost:5000/api/income/total", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }),
+        fetch("http://localhost:5000/api/expenses/total", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }),
+      ]);
+
+      const incomeData = await incomeResponse.json();
+      const expenseData = await expenseResponse.json();
+
+      const totalIncome = parseFloat(incomeData.total) || 0;
+      const totalExpenses = parseFloat(expenseData.total) || 0;
+      setCurrentBalance(totalIncome - totalExpenses);
+    } catch (error) {
+      console.error("Error fetching balance:", error);
+    }
+  };
+
   const handleAddExpense = async (e) => {
     e.preventDefault();
 
@@ -61,6 +94,27 @@ const Expenses = () => {
       return;
     }
 
+    const expenseAmount = parseFloat(newExpense);
+    if (expenseAmount > currentBalance) {
+      setPendingExpense({
+        amount: expenseAmount,
+        description: expenseDescription,
+        category_id: selectedCategory,
+        date: new Date().toISOString(),
+      });
+      setShowWarningModal(true);
+      return;
+    }
+
+    await submitExpense({
+      amount: expenseAmount,
+      description: expenseDescription,
+      category_id: selectedCategory,
+      date: new Date().toISOString(),
+    });
+  };
+
+  const submitExpense = async (expenseData) => {
     try {
       const response = await fetch("http://localhost:5000/api/expenses", {
         method: "POST",
@@ -68,20 +122,16 @@ const Expenses = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-        body: JSON.stringify({
-          amount: parseFloat(newExpense),
-          description: expenseDescription,
-          category_id: selectedCategory,
-          date: new Date().toISOString(),
-        }),
+        body: JSON.stringify(expenseData),
       });
 
       if (response.ok) {
-        await fetchExpenses();
+        await Promise.all([fetchExpenses(), fetchCurrentBalance()]);
         setNewExpense("");
         setExpenseDescription("");
         setSelectedCategory("");
         setShowExpenseForm(false);
+        setShowWarningModal(false);
       } else {
         const data = await response.json();
         alert(data.message || "Failed to add expense");
@@ -224,6 +274,44 @@ const Expenses = () => {
             )}
           </div>
         </div>
+
+        {showWarningModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-medium text-white mb-4">Warning</h3>
+              <p className="text-gray-300 mb-6">
+                Insufficient balance for this expense.
+                <br />
+                <br />
+                Current Balance: ₱
+                {currentBalance.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+                <br />
+                Expense Amount: ₱
+                {parseFloat(pendingExpense?.amount).toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowWarningModal(false)}
+                  className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => submitExpense(pendingExpense)}
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                >
+                  Proceed Anyway
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

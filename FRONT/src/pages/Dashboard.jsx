@@ -463,11 +463,19 @@ const Dashboard = () => {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-yellow-900/50 border border-yellow-500/50 rounded-lg p-4 flex items-center justify-between"
+          className={`${
+            balanceData.currentBalance < threshold
+              ? "bg-red-900/50 border-red-500/50"
+              : "bg-yellow-900/50 border-yellow-500/50"
+          } border rounded-lg p-4 flex items-center justify-between`}
         >
           <div className="flex items-center space-x-3">
             <svg
-              className="h-5 w-5 text-yellow-500 animate-pulse"
+              className={`h-5 w-5 ${
+                balanceData.currentBalance < threshold
+                  ? "text-red-500"
+                  : "text-yellow-500"
+              } animate-pulse`}
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -480,19 +488,47 @@ const Dashboard = () => {
               />
             </svg>
             <div>
-              <p className="text-yellow-500 font-medium">Low Balance Alert</p>
-              <p className="text-yellow-500/80 text-sm">
-                Your balance is getting close to your minimum threshold of ₱
-                {parseFloat(threshold).toLocaleString("en-US", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
+              <p
+                className={`${
+                  balanceData.currentBalance < threshold
+                    ? "text-red-500"
+                    : "text-yellow-500"
+                } font-medium`}
+              >
+                {balanceData.currentBalance < threshold
+                  ? "Low Balance Warning"
+                  : "Low Balance Alert"}
+              </p>
+              <p
+                className={`${
+                  balanceData.currentBalance < threshold
+                    ? "text-red-500/80"
+                    : "text-yellow-500/80"
+                } text-sm`}
+              >
+                {balanceData.currentBalance < threshold
+                  ? `Your balance is below your minimum threshold of ₱${parseFloat(
+                      threshold
+                    ).toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}`
+                  : `Your balance is getting close to your minimum threshold of ₱${parseFloat(
+                      threshold
+                    ).toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}`}
               </p>
             </div>
           </div>
           <button
             onClick={() => setShowThresholdAlert(false)}
-            className="text-yellow-500/80 hover:text-yellow-500 transition-colors"
+            className={`${
+              balanceData.currentBalance < threshold
+                ? "text-red-500/80 hover:text-red-500"
+                : "text-yellow-500/80 hover:text-yellow-500"
+            } transition-colors`}
           >
             <svg
               className="h-5 w-5"
