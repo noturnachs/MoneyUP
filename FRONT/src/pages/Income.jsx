@@ -14,6 +14,7 @@ const Income = () => {
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -65,9 +66,11 @@ const Income = () => {
 
   const handleAddIncome = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     if (!newIncome || !incomeDescription || !selectedCategory) {
       alert("Please fill in all fields");
+      setIsSubmitting(false);
       return;
     }
 
@@ -99,6 +102,8 @@ const Income = () => {
     } catch (error) {
       console.error("Error adding income:", error);
       alert("An error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -129,7 +134,8 @@ const Income = () => {
           <h1 className="text-2xl font-bold text-white">Income</h1>
           <button
             onClick={() => setShowIncomeForm(!showIncomeForm)}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+            disabled={isSubmitting}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             + Add Income
           </button>
@@ -193,15 +199,30 @@ const Income = () => {
                 <button
                   type="button"
                   onClick={() => setShowIncomeForm(false)}
-                  className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                  disabled={isSubmitting}
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Add Income
+                  {isSubmitting ? (
+                    <>
+                      <l-ring
+                        size="15"
+                        stroke="2"
+                        bg-opacity="0"
+                        speed="2"
+                        color="white"
+                      />
+                      <span>Adding...</span>
+                    </>
+                  ) : (
+                    "Add Income"
+                  )}
                 </button>
               </div>
             </form>

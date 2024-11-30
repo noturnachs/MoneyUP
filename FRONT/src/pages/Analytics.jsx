@@ -143,6 +143,29 @@ const Analytics = () => {
     fetchAnalyticsData();
   }, [timeframe]); // Only re-fetch when timeframe changes
 
+  useEffect(() => {
+    const fetchInsights = async () => {
+      try {
+        const response = await fetch(
+          `${process.env.REACT_APP_API_URL}/analytics/insights`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+        const data = await response.json();
+        if (data.success) {
+          setSpendingInsights(data.insights);
+        }
+      } catch (error) {
+        console.error("Error fetching insights:", error);
+      }
+    };
+
+    fetchInsights();
+  }, [timeframe]); // Add timeframe as dependency to refresh insights when timeframe changes
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
@@ -294,49 +317,47 @@ const Analytics = () => {
 
   // Update the insights rendering section
   const renderInsightIcon = (type) => {
-    switch (type) {
-      case "increase":
-        return (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fillRule="evenodd"
-              d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z"
-              clipRule="evenodd"
-            />
-          </svg>
-        );
-      case "decrease":
-        return (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fillRule="evenodd"
-              d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 012 0v7.586l2.293-2.293a1 1 0 011.414 0z"
-              clipRule="evenodd"
-            />
-          </svg>
-        );
-      default:
-        return null;
+    if (type === "increase") {
+      return (
+        <svg
+          className="h-5 w-5 text-red-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+          />
+        </svg>
+      );
     }
+    return (
+      <svg
+        className="h-5 w-5 text-green-400"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"
+        />
+      </svg>
+    );
   };
 
   const getStatusColor = (status) => {
     switch (status) {
       case "high":
         return "bg-red-400";
-      case "low":
+      case "normal":
         return "bg-green-400";
-      case "new":
+      case "low":
         return "bg-blue-400";
       default:
         return "bg-yellow-400";

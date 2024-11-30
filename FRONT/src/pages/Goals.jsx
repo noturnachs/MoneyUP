@@ -51,6 +51,9 @@ const Goals = () => {
   const [balanceData, setBalanceData] = useState({ currentBalance: null });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [goalToDelete, setGoalToDelete] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isAccomplishing, setIsAccomplishing] = useState(false);
 
   const fetchGoals = useCallback(async () => {
     try {
@@ -126,6 +129,7 @@ const Goals = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       const url = isEditing
         ? `${process.env.REACT_APP_API_URL}/goals/${currentGoal.id}`
@@ -158,6 +162,8 @@ const Goals = () => {
     } catch (error) {
       console.error("Error saving goal:", error);
       alert("Failed to save goal");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -167,6 +173,7 @@ const Goals = () => {
   };
 
   const confirmDelete = async () => {
+    setIsDeleting(true);
     try {
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/goals/${goalToDelete.goal_id}`,
@@ -179,12 +186,15 @@ const Goals = () => {
       );
 
       if (response.ok) {
-        fetchGoals();
+        await fetchGoals();
         setShowDeleteModal(false);
         setGoalToDelete(null);
       }
     } catch (error) {
       console.error("Error deleting goal:", error);
+      alert("Failed to delete goal");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -208,8 +218,8 @@ const Goals = () => {
     goalAmount,
     goalDescription
   ) => {
+    setIsAccomplishing(true);
     try {
-      // First mark the goal as accomplished
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/goals/${goalId}/accomplish`,
         {
@@ -259,6 +269,8 @@ const Goals = () => {
     } catch (error) {
       console.error("Error marking goal as accomplished:", error);
       alert("Failed to mark goal as accomplished");
+    } finally {
+      setIsAccomplishing(false);
     }
   };
 
@@ -552,15 +564,30 @@ const Goals = () => {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors"
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isEditing ? "Update" : "Create"} Goal
+                  {isSubmitting ? (
+                    <>
+                      <l-ring
+                        size="15"
+                        stroke="2"
+                        bg-opacity="0"
+                        speed="2"
+                        color="white"
+                      />
+                      <span>{isEditing ? "Updating..." : "Creating..."}</span>
+                    </>
+                  ) : (
+                    <span>{isEditing ? "Update" : "Create"} Goal</span>
+                  )}
                 </button>
               </div>
             </form>
@@ -645,9 +672,23 @@ const Goals = () => {
               <button
                 type="button"
                 onClick={confirmDelete}
-                className="inline-flex w-full justify-center rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:w-auto"
+                disabled={isDeleting}
+                className="inline-flex w-full justify-center rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed items-center space-x-2"
               >
-                Delete Goal
+                {isDeleting ? (
+                  <>
+                    <l-ring
+                      size="15"
+                      stroke="2"
+                      bg-opacity="0"
+                      speed="2"
+                      color="white"
+                    />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  "Delete Goal"
+                )}
               </button>
               <button
                 type="button"
@@ -655,7 +696,8 @@ const Goals = () => {
                   setShowDeleteModal(false);
                   setGoalToDelete(null);
                 }}
-                className="mt-3 inline-flex w-full justify-center rounded-lg bg-gray-700 px-3 py-2 text-sm font-semibold text-gray-300 shadow-sm ring-1 ring-inset ring-gray-600 hover:bg-gray-600 sm:mt-0 sm:w-auto"
+                disabled={isDeleting}
+                className="mt-3 inline-flex w-full justify-center rounded-lg bg-gray-700 px-3 py-2 text-sm font-semibold text-gray-300 shadow-sm ring-1 ring-inset ring-gray-600 hover:bg-gray-600 sm:mt-0 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>

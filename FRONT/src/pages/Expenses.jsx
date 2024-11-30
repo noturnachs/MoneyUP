@@ -17,6 +17,7 @@ const Expenses = () => {
   const [pendingExpense, setPendingExpense] = useState(null);
   const [currentBalance, setCurrentBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -102,9 +103,11 @@ const Expenses = () => {
 
   const handleAddExpense = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     if (!newExpense || !expenseDescription || !selectedCategory) {
       alert("Please fill in all fields");
+      setIsSubmitting(false);
       return;
     }
 
@@ -117,6 +120,7 @@ const Expenses = () => {
         date: new Date().toISOString(),
       });
       setShowWarningModal(true);
+      setIsSubmitting(false);
       return;
     }
 
@@ -129,6 +133,7 @@ const Expenses = () => {
   };
 
   const submitExpense = async (expenseData) => {
+    setIsSubmitting(true);
     try {
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/expenses`,
@@ -156,6 +161,8 @@ const Expenses = () => {
     } catch (error) {
       console.error("Error adding expense:", error);
       alert("An error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -185,7 +192,8 @@ const Expenses = () => {
           <h1 className="text-2xl font-bold text-white">Expenses</h1>
           <button
             onClick={() => setShowExpenseForm(!showExpenseForm)}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+            disabled={isSubmitting}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             + Add Expense
           </button>
@@ -248,15 +256,30 @@ const Expenses = () => {
                 <button
                   type="button"
                   onClick={() => setShowExpenseForm(false)}
-                  className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                  disabled={isSubmitting}
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Add Expense
+                  {isSubmitting ? (
+                    <>
+                      <l-ring
+                        size="15"
+                        stroke="2"
+                        bg-opacity="0"
+                        speed="2"
+                        color="white"
+                      />
+                      <span>Adding...</span>
+                    </>
+                  ) : (
+                    "Add Expense"
+                  )}
                 </button>
               </div>
             </form>
@@ -372,15 +395,30 @@ const Expenses = () => {
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => setShowWarningModal(false)}
-                  className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => submitExpense(pendingExpense)}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                  disabled={isSubmitting}
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Proceed Anyway
+                  {isSubmitting ? (
+                    <>
+                      <l-ring
+                        size="15"
+                        stroke="2"
+                        bg-opacity="0"
+                        speed="2"
+                        color="white"
+                      />
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    "Proceed Anyway"
+                  )}
                 </button>
               </div>
             </div>
