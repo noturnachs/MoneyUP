@@ -1,9 +1,13 @@
-import { Bars3Icon } from "@heroicons/react/24/outline";
+import {
+  Bars3Icon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from "@heroicons/react/24/outline";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
-const Navbar = ({ onMenuClick }) => {
-  const { user, logout } = useAuth();
+const Navbar = ({ onMenuClick, isCollapsed }) => {
+  const { user } = useAuth();
 
   return (
     <nav className="bg-gray-800 border-b border-gray-700">
@@ -13,9 +17,13 @@ const Navbar = ({ onMenuClick }) => {
             {user && (
               <button
                 onClick={onMenuClick}
-                className="text-gray-400 hover:text-white focus:outline-none"
+                className="text-gray-400 hover:text-white focus:outline-none hidden md:block"
               >
-                <Bars3Icon className="h-6 w-6" />
+                {isCollapsed ? (
+                  <ChevronRightIcon className="h-6 w-6" />
+                ) : (
+                  <ChevronLeftIcon className="h-6 w-6" />
+                )}
               </button>
             )}
             <div className="ml-4 text-xl font-bold text-white">

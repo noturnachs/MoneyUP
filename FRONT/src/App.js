@@ -32,6 +32,7 @@ import PublicRoute from "./components/auth/PublicRoute";
 // Layout wrapper component
 const AppLayout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
 
   // List of routes where we don't want to show the sidebar/navbar
@@ -44,12 +45,17 @@ const AppLayout = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      <Navbar onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
+      <Navbar
+        onMenuClick={() => setIsCollapsed(!isCollapsed)}
+        isCollapsed={isCollapsed}
+      />
       <div className="flex h-[calc(100vh-64px)] relative">
         <div className="z-[1]">
           <Sidebar
             isOpen={isSidebarOpen}
             onClose={() => setIsSidebarOpen(false)}
+            isCollapsed={isCollapsed}
+            setIsCollapsed={setIsCollapsed}
           />
         </div>
         <main className="flex-1 p-6 overflow-auto">{children}</main>

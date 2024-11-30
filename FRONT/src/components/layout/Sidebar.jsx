@@ -14,8 +14,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 
-const Sidebar = ({ isOpen, onClose }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+const Sidebar = ({ isOpen, onClose, isCollapsed, setIsCollapsed }) => {
   const { logout } = useAuth();
   const location = useLocation();
 
