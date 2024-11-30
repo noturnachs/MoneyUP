@@ -18,7 +18,9 @@ const Navbar = ({ onMenuClick }) => {
                 <Bars3Icon className="h-6 w-6" />
               </button>
             )}
-            <div className="ml-4 text-xl font-bold text-white">MoneyUp</div>
+            <div className="ml-4 text-xl font-bold text-white">
+              Money<span className="text-green-500">Up</span>
+            </div>
           </div>
           <div className="flex items-center">
             {user ? (

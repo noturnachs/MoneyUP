@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { CheckCircleIcon } from "@heroicons/react/24/outline";
+import { motion } from "framer-motion";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -23,6 +24,110 @@ const Dashboard = () => {
     lastChangeDate: null,
   });
   const [isVisible, setIsVisible] = useState(false);
+  const [threshold, setThreshold] = useState("");
+  const [showThresholdAlert, setShowThresholdAlert] = useState(false);
+
+  const fetchThreshold = useCallback(async () => {
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/threshold", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      const data = await response.json();
+      if (data.success) {
+        setThreshold(data.threshold || "");
+      }
+    } catch (error) {
+      console.error("Error fetching threshold:", error);
+    }
+  }, []);
+
+  const handleThresholdSubmit = async (thresholdValue) => {
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/threshold", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ threshold: thresholdValue || null }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update threshold");
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error updating threshold:", error);
+      return false;
+    }
+  };
+
+  const handleInitialSetup = async (e) => {
+    e.preventDefault();
+    if (!initialBalance || !selectedCategory) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    try {
+      const incomeResponse = await fetch("http://localhost:5000/api/income", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          amount: initialBalance,
+          description: "Initial Balance",
+          category_id: selectedCategory,
+          date: new Date().toISOString(),
+        }),
+      });
+
+      if (!incomeResponse.ok) {
+        throw new Error("Failed to set initial balance");
+      }
+
+      if (threshold) {
+        const thresholdSuccess = await handleThresholdSubmit(threshold);
+        if (!thresholdSuccess) {
+          console.error("Failed to set threshold, but initial balance was set");
+        }
+      }
+
+      setStep(3);
+      setTimeout(() => {
+        setHasData(true);
+        window.location.reload();
+      }, 2000);
+    } catch (error) {
+      console.error("Error during initial setup:", error);
+      alert("There was an error setting up your account. Please try again.");
+    }
+  };
+
+  useEffect(() => {
+    if (hasData) {
+      fetchThreshold();
+    }
+  }, [hasData, fetchThreshold]);
+
+  useEffect(() => {
+    if (threshold && balanceData.currentBalance) {
+      const thresholdValue = parseFloat(threshold);
+      const currentBalance = parseFloat(balanceData.currentBalance);
+      const warningThreshold = thresholdValue * 1.1; // Alert when within 10% of threshold
+
+      if (currentBalance <= warningThreshold) {
+        setShowThresholdAlert(true);
+      } else {
+        setShowThresholdAlert(false);
+      }
+    }
+  }, [threshold, balanceData.currentBalance]);
 
   // Initial data check
   useEffect(() => {
@@ -166,40 +271,6 @@ const Dashboard = () => {
     }
   }, [hasData]);
 
-  const handleInitialSetup = async (e) => {
-    e.preventDefault();
-    if (!initialBalance || !selectedCategory) {
-      alert("Please fill in all fields");
-      return;
-    }
-
-    try {
-      const response = await fetch("http://localhost:5000/api/income", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
-          amount: initialBalance,
-          description: "Initial Balance",
-          category_id: selectedCategory,
-          date: new Date().toISOString(),
-        }),
-      });
-
-      if (response.ok) {
-        setStep(3);
-        setTimeout(() => {
-          setHasData(true);
-          window.location.reload();
-        }, 2000);
-      }
-    } catch (error) {
-      console.error("Error setting initial balance:", error);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -300,6 +371,25 @@ const Dashboard = () => {
                   </select>
                 </div>
 
+                <div className="space-y-4">
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-gray-400">₱</span>
+                    </div>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={threshold}
+                      onChange={(e) => setThreshold(e.target.value)}
+                      className="pl-8 appearance-none block w-full px-3 py-3 border border-gray-700 rounded-lg bg-gray-700 text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg"
+                      placeholder="Set minimum balance alert (optional)"
+                    />
+                  </div>
+                  <p className="text-sm text-gray-400">
+                    We'll alert you when your balance gets close to this amount
+                  </p>
+                </div>
+
                 <div className="flex space-x-4">
                   <button
                     type="button"
@@ -345,7 +435,7 @@ const Dashboard = () => {
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
           <h3 className="text-gray-400 text-sm font-medium">Net Balance</h3>
           <div className="mt-2 space-y-1">
-            <p className="text-2xl font-bold text-white">
+            <p className="text-2xl font-bold text-green-500">
               ₱
               {(balanceData?.totalBalance || 0).toLocaleString("en-US", {
                 minimumFractionDigits: 2,
@@ -369,7 +459,18 @@ const Dashboard = () => {
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
           <h3 className="text-gray-400 text-sm font-medium">Current Balance</h3>
           <div className="mt-2 space-y-1">
-            <p className="text-2xl font-bold text-white">
+            <p
+              className={`text-2xl font-bold ${
+                threshold && balanceData?.currentBalance
+                  ? balanceData.currentBalance <= parseFloat(threshold) * 1.1 &&
+                    balanceData.currentBalance > parseFloat(threshold)
+                    ? "text-orange-500" // Near threshold (within 10%)
+                    : balanceData.currentBalance <= parseFloat(threshold)
+                    ? "text-red-600" // Below threshold
+                    : "text-white" // Above threshold
+                  : "text-white" // No threshold set
+              }`}
+            >
               ₱
               {(balanceData?.currentBalance || 0).toLocaleString("en-US", {
                 minimumFractionDigits: 2,
@@ -414,7 +515,7 @@ const Dashboard = () => {
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
           <h3 className="text-gray-400 text-sm font-medium">Expenses</h3>
           <div className="mt-2 space-y-1">
-            <p className="text-2xl font-bold text-white">
+            <p className="text-2xl font-bold text-red-500">
               ₱
               {(balanceData?.monthlyExpenses || 0).toLocaleString("en-US", {
                 minimumFractionDigits: 2,
@@ -439,6 +540,59 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Threshold Alert */}
+      {showThresholdAlert && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-yellow-900/50 border border-yellow-500/50 rounded-lg p-4 flex items-center justify-between"
+        >
+          <div className="flex items-center space-x-3">
+            <svg
+              className="h-5 w-5 text-yellow-500 animate-pulse"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+            <div>
+              <p className="text-yellow-500 font-medium">Low Balance Alert</p>
+              <p className="text-yellow-500/80 text-sm">
+                Your balance is getting close to your minimum threshold of ₱
+                {parseFloat(threshold).toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowThresholdAlert(false)}
+            className="text-yellow-500/80 hover:text-yellow-500 transition-colors"
+          >
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </motion.div>
+      )}
 
       {/* Recent Updates Section */}
       <div className="bg-gray-800 rounded-xl border border-gray-700 mt-6">

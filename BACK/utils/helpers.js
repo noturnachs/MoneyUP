@@ -48,9 +48,23 @@ const validateUser = (data) => {
   return errors;
 };
 
+const validateThreshold = (threshold) => {
+  const errors = [];
+
+  if (
+    threshold !== null &&
+    (isNaN(parseFloat(threshold)) || parseFloat(threshold) < 0)
+  ) {
+    errors.push("Threshold must be a positive number or null");
+  }
+
+  return errors;
+};
+
 module.exports = {
   formatDate,
   calculateBalance,
   validateTransaction,
   validateUser,
+  validateThreshold,
 };

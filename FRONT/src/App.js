@@ -15,6 +15,7 @@ import Expenses from "./pages/Expenses";
 import Analytics from "./pages/Analytics";
 import Profile from "./pages/Profile";
 import Income from "./pages/Income";
+import Settings from "./pages/Settings";
 
 // Import components
 import Navbar from "./components/layout/Navbar";
@@ -114,6 +115,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Income />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
                 </ProtectedRoute>
               }
             />

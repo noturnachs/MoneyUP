@@ -389,3 +389,76 @@ exports.checkAvailability = async (req, res) => {
     });
   }
 };
+
+exports.updateThreshold = async (req, res) => {
+  try {
+    const { threshold } = req.body;
+    const userId = req.user.id;
+
+    // Validate threshold value
+    if (
+      threshold !== null &&
+      (isNaN(parseFloat(threshold)) || parseFloat(threshold) < 0)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Threshold must be a positive number or null",
+      });
+    }
+
+    // Update threshold in database
+    const [result] = await db.execute(
+      "UPDATE users SET account_threshold = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
+      [threshold, userId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Threshold updated successfully",
+      threshold: threshold,
+    });
+  } catch (error) {
+    console.error("Error updating threshold:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update threshold",
+    });
+  }
+};
+
+exports.getThreshold = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Get user's threshold
+    const [result] = await db.execute(
+      "SELECT account_threshold FROM users WHERE user_id = ?",
+      [userId]
+    );
+
+    if (!result.length) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      threshold: result[0].account_threshold,
+    });
+  } catch (error) {
+    console.error("Error getting threshold:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to get threshold",
+    });
+  }
+};

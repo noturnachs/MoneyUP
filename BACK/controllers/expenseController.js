@@ -13,12 +13,14 @@ exports.create = async (req, res) => {
     const [balanceResult] = await conn.execute(
       `SELECT 
         (SELECT COALESCE(SUM(amount), 0) FROM income WHERE user_id = ?) -
-        (SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE user_id = ?) as current_balance`,
-      [userId, userId]
+        (SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE user_id = ?) as current_balance,
+        (SELECT account_threshold FROM users WHERE user_id = ?) as threshold`,
+      [userId, userId, userId]
     );
 
     const currentBalance = parseFloat(balanceResult[0].current_balance);
     const expenseAmount = parseFloat(amount);
+    const threshold = balanceResult[0].threshold;
 
     if (currentBalance < expenseAmount) {
       await conn.rollback();
@@ -26,6 +28,17 @@ exports.create = async (req, res) => {
         success: false,
         message: "Insufficient balance for this expense",
       });
+    }
+
+    // Check threshold before creating expense
+    const balanceAfterExpense = currentBalance - expenseAmount;
+    let warning = null;
+
+    if (threshold && balanceAfterExpense <= threshold) {
+      warning = `This expense will bring your balance close to or below your set threshold of ₱${threshold.toLocaleString(
+        "en-US",
+        { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+      )}`;
     }
 
     // Insert the expense
@@ -49,6 +62,7 @@ exports.create = async (req, res) => {
     res.json({
       success: true,
       expense: expense[0],
+      warning,
     });
   } catch (error) {
     await conn.rollback();

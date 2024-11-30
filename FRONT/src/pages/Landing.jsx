@@ -6,7 +6,8 @@ import {
   ChartPieIcon,
   ArrowTrendingUpIcon,
 } from "@heroicons/react/24/outline";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { motion, useAnimation, useScroll, useInView } from "framer-motion";
 import Pricing from "./Pricing";
 
 const Landing = () => {
@@ -54,6 +55,89 @@ const Landing = () => {
     },
   ];
 
+  // Refs for scroll animations
+  const heroRef = useRef(null);
+  const featuresRef = useRef(null);
+  const pricingRef = useRef(null);
+  const ctaRef = useRef(null);
+
+  // Animation controls
+  const heroControls = useAnimation();
+  const featuresControls = useAnimation();
+  const pricingControls = useAnimation();
+  const ctaControls = useAnimation();
+
+  // Check if sections are in view
+  const heroInView = useInView(heroRef, { margin: "-100px" });
+  const featuresInView = useInView(featuresRef, { margin: "-100px" });
+  const pricingInView = useInView(pricingRef, { margin: "-100px" });
+  const ctaInView = useInView(ctaRef, { margin: "-100px" });
+
+  // Animation variants
+  const containerVariants = {
+    hidden: {
+      opacity: 0,
+      y: 50,
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.8,
+        ease: "easeOut",
+        staggerChildren: 0.2,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: {
+      opacity: 0,
+      y: 20,
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        ease: "easeOut",
+      },
+    },
+  };
+
+  // Update animations when sections come into view
+  useEffect(() => {
+    if (heroInView) {
+      heroControls.start("visible");
+    } else {
+      heroControls.start("hidden");
+    }
+  }, [heroInView, heroControls]);
+
+  useEffect(() => {
+    if (featuresInView) {
+      featuresControls.start("visible");
+    } else {
+      featuresControls.start("hidden");
+    }
+  }, [featuresInView, featuresControls]);
+
+  useEffect(() => {
+    if (pricingInView) {
+      pricingControls.start("visible");
+    } else {
+      pricingControls.start("hidden");
+    }
+  }, [pricingInView, pricingControls]);
+
+  useEffect(() => {
+    if (ctaInView) {
+      ctaControls.start("visible");
+    } else {
+      ctaControls.start("hidden");
+    }
+  }, [ctaInView, ctaControls]);
+
   return (
     <div className="bg-gray-900 min-h-screen">
       {/* Navigation */}
@@ -61,7 +145,9 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <span className="text-2xl font-bold text-white">MoneyUp</span>
+              <span className="text-2xl font-bold text-white">
+                Money<span className="text-green-500">Up</span>
+              </span>
             </div>
             <div className="flex items-center space-x-4">
               {user ? (
@@ -101,45 +187,58 @@ const Landing = () => {
       </nav>
 
       {/* Hero Section */}
-      <div className="relative overflow-hidden">
-        <div
-          className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 transition-all duration-700 ease-out transform ${
-            isVisible.hero
-              ? "opacity-100 translate-y-0"
-              : "opacity-0 translate-y-8"
-          }`}
-        >
-          <div className="text-center">
+      <motion.div
+        ref={heroRef}
+        initial="hidden"
+        animate={heroControls}
+        variants={containerVariants}
+        className="relative overflow-hidden"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+          <motion.div variants={itemVariants} className="text-center">
             <h1 className="text-4xl tracking-tight font-extrabold text-white sm:text-5xl md:text-6xl">
-              <span className="block">Take Control of Your</span>
-              <span className="block text-purple-500">Financial Future</span>
+              <motion.span variants={itemVariants} className="block">
+                Take Control of Your
+              </motion.span>
+              <motion.span
+                variants={itemVariants}
+                className="block text-purple-500"
+              >
+                Financial Future
+              </motion.span>
             </h1>
-            <p className="mt-3 max-w-md mx-auto text-base text-gray-300 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
+            <motion.p
+              variants={itemVariants}
+              className="mt-3 max-w-md mx-auto text-base text-gray-300 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl"
+            >
               Track expenses, manage budgets, and achieve your financial goals
               with our intuitive personal finance management tool.
-            </p>
-            <div className="mt-10 flex justify-center">
+            </motion.p>
+            <motion.div
+              variants={itemVariants}
+              className="mt-10 flex justify-center"
+            >
               <Link
                 to="/register"
                 className="px-8 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-purple-600 hover:bg-purple-700 md:text-lg transition-colors"
               >
                 Start Free Today
               </Link>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Features Section */}
-      <div className="bg-gray-800">
-        <div
-          className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 transition-all duration-700 ease-out transform ${
-            isVisible.features
-              ? "opacity-100 translate-y-0"
-              : "opacity-0 translate-y-8"
-          }`}
-        >
-          <div className="text-center">
+      <motion.div
+        ref={featuresRef}
+        initial="hidden"
+        animate={featuresControls}
+        variants={containerVariants}
+        className="bg-gray-800"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <motion.div variants={itemVariants} className="text-center">
             <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
               Everything you need to manage your money
             </h2>
@@ -147,23 +246,29 @@ const Landing = () => {
               Simple yet powerful tools to help you make better financial
               decisions.
             </p>
-          </div>
+          </motion.div>
 
           <div className="mt-20">
             <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
               {features.map((feature, index) => (
-                <div
+                <motion.div
                   key={feature.title}
-                  className={`pt-6 transition-all duration-700 ease-out transform delay-${
-                    index * 100
-                  }`}
-                  style={{
-                    transitionDelay: `${index * 100}ms`,
-                    opacity: isVisible.features ? 1 : 0,
-                    transform: isVisible.features
-                      ? "translateY(0)"
-                      : "translateY(20px)",
+                  variants={{
+                    hidden: {
+                      opacity: 0,
+                      y: 20,
+                      transition: { delay: index * 0.1 },
+                    },
+                    visible: {
+                      opacity: 1,
+                      y: 0,
+                      transition: {
+                        duration: 0.5,
+                        delay: index * 0.1,
+                      },
+                    },
                   }}
+                  className="pt-6"
                 >
                   <div
                     className="flow-root bg-gray-900 rounded-lg px-6 pb-8 
@@ -205,34 +310,36 @@ const Landing = () => {
                       </p>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Add Pricing Section here, before the CTA */}
-      <div
-        className={`transition-all duration-700 ease-out transform ${
-          isVisible.features
-            ? "opacity-100 translate-y-0"
-            : "opacity-0 translate-y-8"
-        }`}
+      {/* Pricing Section */}
+      <motion.div
+        ref={pricingRef}
+        initial="hidden"
+        animate={pricingControls}
+        variants={containerVariants}
       >
         <Pricing />
-      </div>
+      </motion.div>
 
       {/* CTA Section */}
-      <div className="bg-gray-900">
-        <div
-          className={`max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8 transition-all duration-700 ease-out transform ${
-            isVisible.cta
-              ? "opacity-100 translate-y-0"
-              : "opacity-0 translate-y-8"
-          }`}
-        >
-          <div className="bg-purple-600 rounded-lg shadow-xl overflow-hidden">
+      <motion.div
+        ref={ctaRef}
+        initial="hidden"
+        animate={ctaControls}
+        variants={containerVariants}
+        className="bg-gray-900"
+      >
+        <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+          <motion.div
+            variants={itemVariants}
+            className="bg-purple-600 rounded-lg shadow-xl overflow-hidden"
+          >
             <div className="px-6 py-12 sm:px-12 sm:py-16 lg:flex lg:items-center lg:justify-between">
               <div>
                 <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
@@ -259,9 +366,9 @@ const Landing = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Footer */}
       <footer className="bg-gray-900">

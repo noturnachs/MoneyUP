@@ -13,4 +13,8 @@ router.get("/me", authMiddleware, authController.getMe);
 router.get("/profile", authMiddleware, authController.getProfile);
 router.post("/check-availability", authController.checkAvailability);
 
+// Add new threshold routes
+router.post("/threshold", authMiddleware, authController.updateThreshold);
+router.get("/threshold", authMiddleware, authController.getThreshold);
+
 module.exports = router;

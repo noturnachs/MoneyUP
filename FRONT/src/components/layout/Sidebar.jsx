@@ -6,6 +6,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   WalletIcon,
+  Cog6ToothIcon,
   BanknotesIcon,
 } from "@heroicons/react/24/outline";
 import { Link, useLocation } from "react-router-dom";
@@ -47,6 +48,12 @@ const Sidebar = ({ isOpen }) => {
       icon: UserIcon,
       path: "/profile",
       description: "Your account settings",
+    },
+    {
+      name: "Settings",
+      icon: Cog6ToothIcon,
+      path: "/settings",
+      description: "Manage balance alerts", // Added description to match format
     },
   ];
 
