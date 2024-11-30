@@ -16,6 +16,7 @@ import Analytics from "./pages/Analytics";
 import Profile from "./pages/Profile";
 import Income from "./pages/Income";
 import Settings from "./pages/Settings";
+import Goals from "./pages/Goals";
 
 // Import components
 import Navbar from "./components/layout/Navbar";
@@ -83,6 +84,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/goals"
+              element={
+                <ProtectedRoute>
+                  <Goals />
                 </ProtectedRoute>
               }
             />

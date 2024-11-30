@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { CheckCircleIcon } from "@heroicons/react/24/outline";
+import { CheckCircleIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -26,6 +27,7 @@ const Dashboard = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [threshold, setThreshold] = useState("");
   const [showThresholdAlert, setShowThresholdAlert] = useState(false);
+  const [primaryGoal, setPrimaryGoal] = useState(null);
 
   const fetchThreshold = useCallback(async () => {
     try {
@@ -109,11 +111,28 @@ const Dashboard = () => {
     }
   };
 
+  const fetchPrimaryGoal = useCallback(async () => {
+    try {
+      const response = await fetch("http://localhost:5000/api/goals/primary", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      const data = await response.json();
+      if (data.success && data.goal) {
+        setPrimaryGoal(data.goal);
+      }
+    } catch (error) {
+      console.error("Error fetching primary goal:", error);
+    }
+  }, []);
+
   useEffect(() => {
     if (hasData) {
       fetchThreshold();
+      fetchPrimaryGoal();
     }
-  }, [hasData, fetchThreshold]);
+  }, [hasData, fetchThreshold, fetchPrimaryGoal]);
 
   useEffect(() => {
     if (threshold && balanceData.currentBalance) {
@@ -433,7 +452,7 @@ const Dashboard = () => {
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
-          <h3 className="text-gray-400 text-sm font-medium">Net Balance</h3>
+          <h3 className="text-gray-400 text-sm font-medium">Net Savings</h3>
           <div className="mt-2 space-y-1">
             <p className="text-2xl font-bold text-green-500">
               ₱
@@ -539,6 +558,86 @@ const Dashboard = () => {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Goal Progress Card */}
+      <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
+        <div className="flex justify-between items-start mb-4">
+          <h3 className="text-gray-400 text-sm font-medium">Savings Goal</h3>
+          <Link
+            to="/goals"
+            className="text-purple-400 hover:text-purple-300 text-sm"
+          >
+            {primaryGoal ? "Edit" : "Add Goal"} →
+          </Link>
+        </div>
+
+        {primaryGoal ? (
+          <div className="space-y-4">
+            <div>
+              <h4 className="text-lg font-medium text-white">
+                {primaryGoal.description}
+              </h4>
+              <p className="text-sm text-gray-400">
+                Target: {new Date(primaryGoal.target_date).toLocaleDateString()}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Progress</span>
+                <span className="text-white">
+                  {Math.min(
+                    Math.round(
+                      (balanceData.currentBalance / primaryGoal.amount) * 100
+                    ) || 0,
+                    100
+                  )}
+                  %
+                </span>
+              </div>
+              <div className="w-full bg-gray-700 rounded-full h-2">
+                <div
+                  className="bg-purple-500 rounded-full h-2 transition-all duration-500"
+                  style={{
+                    width: `${Math.min(
+                      (balanceData.currentBalance / primaryGoal.amount) * 100 ||
+                        0,
+                      100
+                    )}%`,
+                  }}
+                />
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Current</span>
+                <span className="text-white">
+                  ₱
+                  {balanceData.currentBalance.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Target</span>
+                <span className="text-white">
+                  ₱
+                  {parseFloat(primaryGoal.amount).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-gray-400 mb-2">No savings goal set</p>
+            <Link to="/goals" className="text-purple-400 hover:text-purple-300">
+              Set a goal to start tracking your progress
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Threshold Alert */}

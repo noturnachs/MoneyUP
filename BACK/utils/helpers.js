@@ -61,10 +61,37 @@ const validateThreshold = (threshold) => {
   return errors;
 };
 
+const validateGoal = (data) => {
+  const errors = [];
+
+  if (!data.amount || isNaN(data.amount) || parseFloat(data.amount) <= 0) {
+    errors.push("Amount must be a positive number");
+  }
+
+  if (!data.description || data.description.trim().length === 0) {
+    errors.push("Description is required");
+  }
+
+  if (!data.targetDate) {
+    errors.push("Target date is required");
+  } else {
+    const targetDate = new Date(data.targetDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (targetDate < today) {
+      errors.push("Target date must be in the future");
+    }
+  }
+
+  return errors;
+};
+
 module.exports = {
   formatDate,
   calculateBalance,
   validateTransaction,
   validateUser,
   validateThreshold,
+  validateGoal,
 };

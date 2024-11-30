@@ -8,6 +8,7 @@ import {
   WalletIcon,
   Cog6ToothIcon,
   BanknotesIcon,
+  FlagIcon,
 } from "@heroicons/react/24/outline";
 import { Link, useLocation } from "react-router-dom";
 import { useState } from "react";
@@ -36,6 +37,12 @@ const Sidebar = ({ isOpen }) => {
       icon: WalletIcon,
       path: "/expenses",
       description: "Manage your expenses",
+    },
+    {
+      name: "Goals",
+      icon: FlagIcon,
+      path: "/goals",
+      description: "Track your savings goals",
     },
     {
       name: "Analytics",
