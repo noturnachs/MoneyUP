@@ -118,8 +118,8 @@ exports.getExpensesByCategory = async (req, res) => {
     res.json({
       success: true,
       categories: categories.map((cat) => ({
-        category: cat.category,
-        amount: parseFloat(cat.amount),
+        category: cat.category || "Uncategorized",
+        amount: parseFloat(cat.amount) || 0,
       })),
     });
   } catch (error) {

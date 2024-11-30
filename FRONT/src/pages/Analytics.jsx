@@ -217,15 +217,47 @@ const Analytics = () => {
   };
 
   const doughnutData = {
-    labels: expensesByCategory.map((item) => item.category),
+    labels: expensesByCategory.map((cat) => cat.category),
     datasets: [
       {
-        data: expensesByCategory.map((item) => item.amount),
-        backgroundColor: COLORS,
-        borderColor: "#1F2937",
+        label: "Expenses",
+        data: expensesByCategory.map((cat) => cat.amount),
+        backgroundColor: [
+          "#8b5cf6", // purple-500
+          "#6366f1", // indigo-500
+          "#3b82f6", // blue-500
+          "#0ea5e9", // sky-500
+          "#06b6d4", // cyan-500
+          "#14b8a6", // teal-500
+          "#10b981", // emerald-500
+          "#22c55e", // green-500
+        ],
         borderWidth: 1,
       },
     ],
+  };
+
+  const doughnutOptions = {
+    ...chartOptions,
+    plugins: {
+      ...chartOptions.plugins,
+      legend: {
+        ...chartOptions.plugins.legend,
+        position: "right",
+      },
+      tooltip: {
+        ...chartOptions.plugins.tooltip,
+        callbacks: {
+          label: function (context) {
+            const value = context.raw;
+            return `${context.label}: ${new Intl.NumberFormat("en-PH", {
+              style: "currency",
+              currency: "PHP",
+            }).format(value)}`;
+          },
+        },
+      },
+    },
   };
 
   const lineChartData = {
@@ -459,19 +491,7 @@ const Analytics = () => {
           </h3>
           <div className="h-80">
             {expensesByCategory.length > 0 ? (
-              <Doughnut
-                data={doughnutData}
-                options={{
-                  ...chartOptions,
-                  plugins: {
-                    ...chartOptions.plugins,
-                    legend: {
-                      ...chartOptions.plugins.legend,
-                      position: "right",
-                    },
-                  },
-                }}
-              />
+              <Doughnut data={doughnutData} options={doughnutOptions} />
             ) : (
               <div className="h-full flex items-center justify-center">
                 <p className="text-gray-400 text-lg">No expenses found</p>
