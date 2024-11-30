@@ -6,19 +6,18 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
+  const fetchUserData = async () => {
     const token = localStorage.getItem("token");
     if (token) {
       try {
-        const response = await fetch("http://localhost:5000/api/auth/profile", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await fetch(
+          `${process.env.REACT_APP_API_URL}/auth/profile`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
         if (response.ok) {
           const data = await response.json();
           setUser(data.user);
@@ -27,15 +26,19 @@ export const AuthProvider = ({ children }) => {
           setUser(null);
         }
       } catch (error) {
-        console.error("Auth check error:", error);
+        console.error("Error fetching user data:", error);
         localStorage.removeItem("token");
         setUser(null);
       }
     } else {
       setUser(null);
     }
-    setLoading(false);
   };
+
+  useEffect(() => {
+    fetchUserData();
+    setLoading(false);
+  }, []);
 
   const login = (userData) => {
     setUser(userData);
@@ -47,7 +50,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider
+      value={{ user, login, logout, loading, fetchUserData }}
+    >
       {!loading && children}
     </AuthContext.Provider>
   );

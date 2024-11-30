@@ -20,7 +20,7 @@ const Income = () => {
 
   const fetchIncomeHistory = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/income", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/income`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
@@ -37,7 +37,7 @@ const Income = () => {
   const fetchCategories = async () => {
     try {
       const response = await fetch(
-        "http://localhost:5000/api/categories/type/income",
+        `${process.env.REACT_APP_API_URL}/categories/type/income`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -62,7 +62,7 @@ const Income = () => {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/income", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/income`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

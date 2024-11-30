@@ -62,20 +62,23 @@ const Profile = () => {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/profile", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          currentPassword: formData.currentPassword,
-          newPassword: formData.newPassword,
-        }),
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/auth/profile`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            currentPassword: formData.currentPassword,
+            newPassword: formData.newPassword,
+          }),
+        }
+      );
 
       const data = await response.json();
 
@@ -107,7 +110,7 @@ const Profile = () => {
     ) {
       try {
         const response = await fetch(
-          "http://localhost:5000/api/auth/delete-account",
+          `${process.env.REACT_APP_API_URL}/auth/delete-account`,
           {
             method: "DELETE",
             headers: {

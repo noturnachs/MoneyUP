@@ -60,7 +60,7 @@ const Analytics = () => {
     try {
       // Fetch summary data
       const summaryResponse = await fetch(
-        `http://localhost:5000/api/income/total`,
+        `${process.env.REACT_APP_API_URL}/income/total`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -70,7 +70,7 @@ const Analytics = () => {
       const incomeData = await summaryResponse.json();
 
       const expenseResponse = await fetch(
-        `http://localhost:5000/api/expenses/total`,
+        `${process.env.REACT_APP_API_URL}/expenses/total`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -95,7 +95,7 @@ const Analytics = () => {
 
       // Fetch expenses by category
       const categoryResponse = await fetch(
-        `http://localhost:5000/api/expenses/by-category`,
+        `${process.env.REACT_APP_API_URL}/expenses/by-category`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -107,7 +107,7 @@ const Analytics = () => {
 
       // Fetch income vs expenses data
       const trendResponse = await fetch(
-        `http://localhost:5000/api/analytics/income-vs-expenses?timeframe=${timeframe}`,
+        `${process.env.REACT_APP_API_URL}/analytics/income-vs-expenses?timeframe=${timeframe}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -119,7 +119,7 @@ const Analytics = () => {
 
       // Fetch spending insights
       const insightsResponse = await fetch(
-        `http://localhost:5000/api/analytics/insights`,
+        `${process.env.REACT_APP_API_URL}/analytics/insights`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,

@@ -13,7 +13,7 @@ const Settings = () => {
     const fetchThreshold = async () => {
       try {
         const response = await fetch(
-          "http://localhost:5000/api/auth/threshold",
+          `${process.env.REACT_APP_API_URL}/auth/threshold`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -44,14 +44,17 @@ const Settings = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/threshold", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({ threshold: threshold || null }),
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/auth/threshold`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({ threshold: threshold || null }),
+        }
+      );
 
       const data = await response.json();
 
@@ -85,14 +88,17 @@ const Settings = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/threshold", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({ threshold: null }),
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/auth/threshold`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({ threshold: null }),
+        }
+      );
 
       const data = await response.json();
 

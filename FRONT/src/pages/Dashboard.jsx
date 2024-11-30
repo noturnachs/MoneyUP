@@ -43,11 +43,14 @@ const Dashboard = () => {
 
   const fetchThreshold = useCallback(async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/auth/threshold", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/auth/threshold`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
       const data = await response.json();
       if (data.success) {
         setThreshold(data.threshold || "");
@@ -59,14 +62,17 @@ const Dashboard = () => {
 
   const handleThresholdSubmit = async (thresholdValue) => {
     try {
-      const response = await fetch("http://localhost:5000/api/auth/threshold", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({ threshold: thresholdValue || null }),
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/auth/threshold`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({ threshold: thresholdValue || null }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to update threshold");
@@ -87,19 +93,22 @@ const Dashboard = () => {
     }
 
     try {
-      const incomeResponse = await fetch("http://localhost:5000/api/income", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
-          amount: initialBalance,
-          description: "Initial Balance",
-          category_id: selectedCategory,
-          date: new Date().toISOString(),
-        }),
-      });
+      const incomeResponse = await fetch(
+        `${process.env.REACT_APP_API_URL}/income`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({
+            amount: initialBalance,
+            description: "Initial Balance",
+            category_id: selectedCategory,
+            date: new Date().toISOString(),
+          }),
+        }
+      );
 
       if (!incomeResponse.ok) {
         throw new Error("Failed to set initial balance");
@@ -125,11 +134,14 @@ const Dashboard = () => {
 
   const fetchPrimaryGoal = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/goals/primary", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/goals/primary`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
       const data = await response.json();
       if (data.success) {
         const activeGoal = data.goals.find((goal) => !goal.is_completed);
@@ -165,11 +177,14 @@ const Dashboard = () => {
   useEffect(() => {
     const checkUserData = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/income", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
+        const response = await fetch(
+          `${process.env.REACT_APP_API_URL}/income`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
         const data = await response.json();
         setHasData(data.incomes && data.incomes.length > 0);
       } catch (error) {
@@ -189,12 +204,12 @@ const Dashboard = () => {
         try {
           // Fetch balance data and recent transactions in parallel
           const [incomeResponse, expenseResponse] = await Promise.all([
-            fetch("http://localhost:5000/api/income/total", {
+            fetch(`${process.env.REACT_APP_API_URL}/income/total`, {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem("token")}`,
               },
             }),
-            fetch("http://localhost:5000/api/expenses/total", {
+            fetch(`${process.env.REACT_APP_API_URL}/expenses/total`, {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem("token")}`,
               },
@@ -220,12 +235,12 @@ const Dashboard = () => {
 
           // Fetch recent transactions
           const [recentIncomeRes, recentExpenseRes] = await Promise.all([
-            fetch("http://localhost:5000/api/income/recent", {
+            fetch(`${process.env.REACT_APP_API_URL}/income/recent`, {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem("token")}`,
               },
             }),
-            fetch("http://localhost:5000/api/expenses/recent", {
+            fetch(`${process.env.REACT_APP_API_URL}/expenses/recent`, {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem("token")}`,
               },
@@ -285,7 +300,7 @@ const Dashboard = () => {
       const fetchCategories = async () => {
         try {
           const response = await fetch(
-            "http://localhost:5000/api/categories/type/income",
+            `${process.env.REACT_APP_API_URL}/categories/type/income`,
             {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem("token")}`,

@@ -28,7 +28,7 @@ const Expenses = () => {
   const fetchCategories = async () => {
     try {
       const response = await fetch(
-        "http://localhost:5000/api/categories/type/expense",
+        `${process.env.REACT_APP_API_URL}/categories/type/expense`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -46,11 +46,14 @@ const Expenses = () => {
 
   const fetchExpenses = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/expenses", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/expenses`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
       const data = await response.json();
       if (response.ok) {
         setExpenses(data.expenses || []);
@@ -63,12 +66,12 @@ const Expenses = () => {
   const fetchCurrentBalance = async () => {
     try {
       const [incomeResponse, expenseResponse] = await Promise.all([
-        fetch("http://localhost:5000/api/income/total", {
+        fetch(`${process.env.REACT_APP_API_URL}/income/total`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         }),
-        fetch("http://localhost:5000/api/expenses/total", {
+        fetch(`${process.env.REACT_APP_API_URL}/expenses/total`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
@@ -116,14 +119,17 @@ const Expenses = () => {
 
   const submitExpense = async (expenseData) => {
     try {
-      const response = await fetch("http://localhost:5000/api/expenses", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify(expenseData),
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/expenses`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify(expenseData),
+        }
+      );
 
       if (response.ok) {
         await Promise.all([fetchExpenses(), fetchCurrentBalance()]);

@@ -50,7 +50,7 @@ const Goals = () => {
 
   const fetchGoals = useCallback(async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/goals", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/goals`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
@@ -69,12 +69,12 @@ const Goals = () => {
   const fetchBalance = useCallback(async () => {
     try {
       const [incomeResponse, expenseResponse] = await Promise.all([
-        fetch("http://localhost:5000/api/income/total", {
+        fetch(`${process.env.REACT_APP_API_URL}/income/total`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         }),
-        fetch("http://localhost:5000/api/expenses/total", {
+        fetch(`${process.env.REACT_APP_API_URL}/expenses/total`, {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
@@ -124,8 +124,8 @@ const Goals = () => {
     e.preventDefault();
     try {
       const url = isEditing
-        ? `http://localhost:5000/api/goals/${currentGoal.id}`
-        : "http://localhost:5000/api/goals";
+        ? `${process.env.REACT_APP_API_URL}/goals/${currentGoal.id}`
+        : `${process.env.REACT_APP_API_URL}/goals`;
 
       const formattedGoal = {
         amount: parseFloat(currentGoal.amount),
@@ -165,7 +165,7 @@ const Goals = () => {
   const confirmDelete = async () => {
     try {
       const response = await fetch(
-        `http://localhost:5000/api/goals/${goalToDelete.goal_id}`,
+        `${process.env.REACT_APP_API_URL}/goals/${goalToDelete.goal_id}`,
         {
           method: "DELETE",
           headers: {
@@ -207,7 +207,7 @@ const Goals = () => {
     try {
       // First mark the goal as accomplished
       const response = await fetch(
-        `http://localhost:5000/api/goals/${goalId}/accomplish`,
+        `${process.env.REACT_APP_API_URL}/goals/${goalId}/accomplish`,
         {
           method: "PUT",
           headers: {
@@ -223,7 +223,7 @@ const Goals = () => {
       if (response.ok) {
         // Create an expense for the accomplished goal amount
         const expenseResponse = await fetch(
-          "http://localhost:5000/api/expenses",
+          `${process.env.REACT_APP_API_URL}/expenses`,
           {
             method: "POST",
             headers: {
