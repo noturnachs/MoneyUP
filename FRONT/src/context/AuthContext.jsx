@@ -1,47 +1,78 @@
-import { createContext, useState, useContext, useEffect } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 
-const AuthContext = createContext(null);
+const AuthContext = createContext();
+
+export const useAuth = () => {
+  return useContext(AuthContext);
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = async () => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const response = await fetch(
-          `${process.env.REACT_APP_API_URL}/auth/profile`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        if (response.ok) {
-          const data = await response.json();
-          setUser(data.user);
-        } else {
-          localStorage.removeItem("token");
-          setUser(null);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/auth/profile`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data);
+      } else {
         localStorage.removeItem("token");
         setUser(null);
       }
-    } else {
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      localStorage.removeItem("token");
       setUser(null);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchUserData();
-    setLoading(false);
   }, []);
 
-  const login = (userData) => {
-    setUser(userData);
+  const login = async (credentials) => {
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/auth/login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(credentials),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        localStorage.setItem("token", data.token);
+        await fetchUserData();
+        return { success: true };
+      } else {
+        return { success: false, error: data.message };
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      return { success: false, error: "An error occurred during login" };
+    }
   };
 
   const logout = () => {
@@ -49,13 +80,13 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  return (
-    <AuthContext.Provider
-      value={{ user, login, logout, loading, fetchUserData }}
-    >
-      {!loading && children}
-    </AuthContext.Provider>
-  );
-};
+  const value = {
+    user,
+    loading,
+    login,
+    logout,
+    fetchUserData,
+  };
 
-export const useAuth = () => useContext(AuthContext);
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
