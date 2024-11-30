@@ -22,5 +22,15 @@ router.get("/threshold", authMiddleware, authController.getThreshold);
 router.get("/verify-email", authController.verifyEmail);
 router.post("/forgot-password", authController.forgotPassword);
 router.post("/reset-password", authController.resetPassword);
+router.post(
+  "/verify-email-change",
+  authMiddleware,
+  authController.verifyEmailChange
+);
+router.post(
+  "/confirm-email-change",
+  authMiddleware,
+  authController.confirmEmailChange
+);
 
 module.exports = router;

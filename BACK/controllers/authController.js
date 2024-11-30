@@ -6,6 +6,7 @@ const crypto = require("crypto");
 const {
   sendVerificationEmail,
   sendPasswordResetEmail,
+  sendVerificationCodeEmail,
 } = require("../utils/emailService");
 
 exports.register = async (req, res) => {
@@ -690,5 +691,115 @@ exports.resetPassword = async (req, res) => {
       success: false,
       message: "Error resetting password",
     });
+  }
+};
+
+exports.verifyEmailChange = async (req, res) => {
+  const client = await db.pool.connect();
+  try {
+    const { newEmail } = req.body;
+    const userId = req.user.id;
+
+    // Check if email is already in use
+    const { rows: existingUser } = await client.query(
+      "SELECT * FROM users WHERE email = $1 AND user_id != $2",
+      [newEmail, userId]
+    );
+
+    if (existingUser.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is already in use",
+      });
+    }
+
+    // Generate verification code
+    const verificationCode = Math.floor(
+      100000 + Math.random() * 900000
+    ).toString();
+    const expiresAt = new Date(Date.now() + 30 * 60000); // 30 minutes from now
+
+    // Store verification code in database
+    await client.query(
+      `INSERT INTO email_verifications (user_id, email, code, expires_at, type)
+       VALUES ($1, $2, $3, $4, 'email_change')
+       ON CONFLICT (user_id, type) 
+       DO UPDATE SET email = $2, code = $3, expires_at = $4, verified = false`,
+      [userId, newEmail, verificationCode, expiresAt]
+    );
+
+    // Send verification email using the existing utility function
+    await sendVerificationCodeEmail(newEmail, verificationCode);
+
+    res.json({
+      success: true,
+      message: "Verification code sent to new email address",
+    });
+  } catch (error) {
+    console.error("Email change verification error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error sending verification code",
+    });
+  } finally {
+    client.release();
+  }
+};
+
+exports.confirmEmailChange = async (req, res) => {
+  const client = await db.pool.connect();
+  try {
+    const { code, newEmail } = req.body;
+    const userId = req.user.id;
+
+    // Check verification code
+    const { rows } = await client.query(
+      `SELECT * FROM email_verifications 
+       WHERE user_id = $1 
+       AND email = $2 
+       AND code = $3 
+       AND expires_at > NOW()
+       AND type = 'email_change'
+       AND NOT verified`,
+      [userId, newEmail, code]
+    );
+
+    if (rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired verification code",
+      });
+    }
+
+    // Begin transaction
+    await client.query("BEGIN");
+
+    // Update user's email
+    await client.query(
+      "UPDATE users SET email = $1, email_verified = true WHERE user_id = $2",
+      [newEmail, userId]
+    );
+
+    // Mark verification as used
+    await client.query(
+      "UPDATE email_verifications SET verified = true WHERE user_id = $1 AND type = $2",
+      [userId, "email_change"]
+    );
+
+    await client.query("COMMIT");
+
+    res.json({
+      success: true,
+      message: "Email updated successfully",
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Email change confirmation error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error confirming email change",
+    });
+  } finally {
+    client.release();
   }
 };

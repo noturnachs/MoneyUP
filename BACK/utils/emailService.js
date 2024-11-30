@@ -47,6 +47,31 @@ exports.sendVerificationEmail = async (email, token) => {
   }
 };
 
+// Function to send verification code email
+exports.sendVerificationCodeEmail = async (email, code) => {
+  const mailOptions = {
+    from: `MoneyUp <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: "Your Verification Code - MoneyUp",
+    html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #6B46C1;">Email Verification Code</h1>
+          <p>Your verification code is:</p>
+          <h2 style="font-size: 24px; color: #6B46C1;">${code}</h2>
+          <p>This code will expire in 30 minutes.</p>
+        </div>
+      `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log("Verification code email sent successfully");
+  } catch (error) {
+    console.error("Error sending verification code email:", error);
+    throw new Error("Failed to send verification code email");
+  }
+};
+
 exports.sendPasswordResetEmail = async (email, token) => {
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
 
