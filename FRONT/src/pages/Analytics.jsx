@@ -1,19 +1,30 @@
 import { useState, useEffect } from "react";
 import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
   Tooltip,
   Legend,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-} from "recharts";
+  ArcElement,
+} from "chart.js";
+import { Line, Bar, Doughnut } from "react-chartjs-2";
+
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
 
 const Analytics = () => {
   const [timeframe, setTimeframe] = useState("monthly");
@@ -120,21 +131,106 @@ const Analytics = () => {
     }).format(value);
   };
 
-  // Custom tooltip for charts
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-gray-800 p-4 border border-gray-700 rounded-lg">
-          <p className="text-gray-300">{label}</p>
-          {payload.map((entry, index) => (
-            <p key={index} style={{ color: entry.color }}>
-              {entry.name}: {formatCurrency(entry.value)}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
+  // Add chart options
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "top",
+        labels: {
+          color: "#9CA3AF",
+        },
+      },
+      tooltip: {
+        backgroundColor: "#1F2937",
+        titleColor: "#E5E7EB",
+        bodyColor: "#E5E7EB",
+        borderColor: "#374151",
+        borderWidth: 1,
+        padding: 12,
+        cornerRadius: 8,
+        callbacks: {
+          label: function (context) {
+            return `${context.dataset.label}: ${formatCurrency(context.raw)}`;
+          },
+        },
+      },
+    },
+    scales: {
+      y: {
+        ticks: {
+          color: "#9CA3AF",
+          callback: (value) => formatCurrency(value),
+        },
+        grid: {
+          color: "rgba(75, 85, 99, 0.2)",
+        },
+      },
+      x: {
+        ticks: {
+          color: "#9CA3AF",
+        },
+        grid: {
+          color: "rgba(75, 85, 99, 0.2)",
+        },
+      },
+    },
+  };
+
+  // Transform data for Chart.js
+  const barChartData = {
+    labels: incomeVsExpenses.map((item) => item.period),
+    datasets: [
+      {
+        label: "Income",
+        data: incomeVsExpenses.map((item) => item.income),
+        backgroundColor: "#10B981",
+        borderColor: "#10B981",
+        borderWidth: 1,
+      },
+      {
+        label: "Expenses",
+        data: incomeVsExpenses.map((item) => item.expenses),
+        backgroundColor: "#EF4444",
+        borderColor: "#EF4444",
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const doughnutData = {
+    labels: expensesByCategory.map((item) => item.category),
+    datasets: [
+      {
+        data: expensesByCategory.map((item) => item.amount),
+        backgroundColor: COLORS,
+        borderColor: "#1F2937",
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const lineChartData = {
+    labels: incomeVsExpenses.map((item) => item.period),
+    datasets: [
+      {
+        label: "Income",
+        data: incomeVsExpenses.map((item) => item.income),
+        borderColor: "#10B981",
+        backgroundColor: "rgba(16, 185, 129, 0.1)",
+        tension: 0.4,
+        fill: true,
+      },
+      {
+        label: "Expenses",
+        data: incomeVsExpenses.map((item) => item.expenses),
+        borderColor: "#EF4444",
+        backgroundColor: "rgba(239, 68, 68, 0.1)",
+        tension: 0.4,
+        fill: true,
+      },
+    ],
   };
 
   return (
@@ -194,25 +290,7 @@ const Analytics = () => {
             Income vs Expenses
           </h3>
           <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={incomeVsExpenses}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis
-                  dataKey="period"
-                  stroke="#9CA3AF"
-                  tick={{ fill: "#9CA3AF" }}
-                />
-                <YAxis
-                  stroke="#9CA3AF"
-                  tick={{ fill: "#9CA3AF" }}
-                  tickFormatter={(value) => `₱${value.toLocaleString()}`}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                <Bar dataKey="income" name="Income" fill="#10B981" />
-                <Bar dataKey="expenses" name="Expenses" fill="#EF4444" />
-              </BarChart>
-            </ResponsiveContainer>
+            <Bar data={barChartData} options={chartOptions} />
           </div>
         </div>
 
@@ -223,53 +301,19 @@ const Analytics = () => {
           </h3>
           <div className="h-80">
             {expensesByCategory.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={expensesByCategory}
-                    dataKey="amount"
-                    nameKey="category"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={0}
-                    outerRadius={90}
-                    label={({ name, percent }) => {
-                      if (percent < 0.03) return null; // Hide very small segments
-                      return `${name} ${(percent * 100).toFixed(0)}%`;
-                    }}
-                    labelLine={{
-                      strokeWidth: 1,
-                      stroke: "#6B7280",
-                      length: 10,
-                      angle: 45,
-                    }}
-                    labelStyle={{
-                      fill: "#9CA3AF", // text color
-                      fontSize: "12px",
-                      fontWeight: 500,
-                    }}
-                  >
-                    {expensesByCategory.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                        strokeWidth={1}
-                        stroke="#1F2937" // dark border for contrast
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value) => formatCurrency(value)}
-                    contentStyle={{
-                      backgroundColor: "#1F2937",
-                      border: "1px solid #374151",
-                      borderRadius: "0.5rem",
-                      padding: "8px 12px",
-                      color: "#E5E7EB",
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <Doughnut
+                data={doughnutData}
+                options={{
+                  ...chartOptions,
+                  plugins: {
+                    ...chartOptions.plugins,
+                    legend: {
+                      ...chartOptions.plugins.legend,
+                      position: "right",
+                    },
+                  },
+                }}
+              />
             ) : (
               <div className="h-full flex items-center justify-center">
                 <p className="text-gray-400 text-lg">No expenses found</p>
@@ -284,37 +328,7 @@ const Analytics = () => {
             Income & Expenses Trend
           </h3>
           <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={incomeVsExpenses}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis
-                  dataKey="period"
-                  stroke="#9CA3AF"
-                  tick={{ fill: "#9CA3AF" }}
-                />
-                <YAxis
-                  stroke="#9CA3AF"
-                  tick={{ fill: "#9CA3AF" }}
-                  tickFormatter={(value) => `₱${value.toLocaleString()}`}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="income"
-                  stroke="#10B981"
-                  strokeWidth={2}
-                  dot={{ fill: "#10B981" }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="expenses"
-                  stroke="#EF4444"
-                  strokeWidth={2}
-                  dot={{ fill: "#EF4444" }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <Line data={lineChartData} options={chartOptions} />
           </div>
         </div>
       </div>

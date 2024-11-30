@@ -11,6 +11,32 @@ import { useState, useEffect, useRef } from "react";
 import { motion, useAnimation, useScroll, useInView } from "framer-motion";
 import Pricing from "./Pricing";
 import showcaseImage from "../components/images/showcase.png";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+} from "chart.js";
+import { Line, Bar, Doughnut } from "react-chartjs-2";
+
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
 
 const Landing = () => {
   const { user, logout } = useAuth();
@@ -146,6 +172,70 @@ const Landing = () => {
     }
   }, [ctaInView, ctaControls]);
 
+  // Add these chart configurations inside the Landing component
+  const chartData = {
+    expenses: {
+      labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+      datasets: [
+        {
+          label: "Monthly Expenses",
+          data: [2100, 1800, 2300, 1900, 2500, 2000],
+          borderColor: "rgb(147, 51, 234)",
+          backgroundColor: "rgba(147, 51, 234, 0.5)",
+          tension: 0.4,
+        },
+      ],
+    },
+    categories: {
+      labels: ["Food", "Transport", "Shopping", "Bills", "Entertainment"],
+      datasets: [
+        {
+          label: "Spending by Category",
+          data: [300, 200, 250, 450, 300],
+          backgroundColor: [
+            "rgba(147, 51, 234, 0.8)",
+            "rgba(168, 85, 247, 0.8)",
+            "rgba(192, 132, 252, 0.8)",
+            "rgba(216, 180, 254, 0.8)",
+            "rgba(233, 213, 255, 0.8)",
+          ],
+          borderWidth: 1,
+        },
+      ],
+    },
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "top",
+        labels: {
+          color: "#9CA3AF",
+        },
+      },
+    },
+    scales: {
+      y: {
+        ticks: {
+          color: "#9CA3AF",
+        },
+        grid: {
+          color: "rgba(75, 85, 99, 0.2)",
+        },
+      },
+      x: {
+        ticks: {
+          color: "#9CA3AF",
+        },
+        grid: {
+          color: "rgba(75, 85, 99, 0.2)",
+        },
+      },
+    },
+  };
+
   return (
     <div className="bg-gray-900 min-h-screen">
       {/* Navigation */}
@@ -264,6 +354,65 @@ const Landing = () => {
                   {/* Optional Floating Elements */}
                   <div className="absolute inset-0 bg-gradient-to-tr from-purple-500/10 to-transparent pointer-events-none"></div>
                 </motion.div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Charts Section */}
+      <motion.div
+        initial="hidden"
+        animate={featuresControls}
+        variants={containerVariants}
+        className="bg-gray-900 py-16"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div variants={itemVariants} className="text-center mb-12">
+            <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
+              Powerful Analytics at Your Fingertips
+            </h2>
+            <p className="mt-4 text-lg text-gray-400">
+              Visualize your finances with interactive charts and insights
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Expenses Trend Chart */}
+            <motion.div
+              variants={itemVariants}
+              className="bg-gray-800 p-6 rounded-lg shadow-xl"
+            >
+              <h3 className="text-xl font-semibold text-white mb-4">
+                Expenses Trend
+              </h3>
+              <div className="h-[300px]">
+                <Line data={chartData.expenses} options={chartOptions} />
+              </div>
+            </motion.div>
+
+            {/* Spending by Category Chart */}
+            <motion.div
+              variants={itemVariants}
+              className="bg-gray-800 p-6 rounded-lg shadow-xl"
+            >
+              <h3 className="text-xl font-semibold text-white mb-4">
+                Spending by Category
+              </h3>
+              <div className="h-[300px]">
+                <Doughnut
+                  data={chartData.categories}
+                  options={{
+                    ...chartOptions,
+                    plugins: {
+                      ...chartOptions.plugins,
+                      legend: {
+                        ...chartOptions.plugins.legend,
+                        position: "right",
+                      },
+                    },
+                  }}
+                />
               </div>
             </motion.div>
           </div>
