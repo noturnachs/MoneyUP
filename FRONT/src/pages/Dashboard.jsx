@@ -134,10 +134,10 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const fetchInitialData = async () => {
       try {
-        const [primaryGoalResponse, thresholdResponse] = await Promise.all([
-          fetch(`${process.env.REACT_APP_API_URL}/goals/primary`, {
+        const [incomeResponse, thresholdResponse] = await Promise.all([
+          fetch(`${process.env.REACT_APP_API_URL}/income`, {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
             },
@@ -149,23 +149,23 @@ const Dashboard = () => {
           }),
         ]);
 
-        const [primaryGoalData, thresholdData] = await Promise.all([
-          primaryGoalResponse.json(),
+        const [incomeData, thresholdData] = await Promise.all([
+          incomeResponse.json(),
           thresholdResponse.json(),
         ]);
 
-        if (primaryGoalData.success) {
-          setPrimaryGoal(primaryGoalData.goal);
-        }
+        setHasData(incomeData.incomes && incomeData.incomes.length > 0);
         if (thresholdData.success) {
           setThreshold(thresholdData.threshold || "");
         }
       } catch (error) {
-        console.error("Error fetching dashboard data:", error);
+        console.error("Error fetching initial data:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    fetchDashboardData();
+    fetchInitialData();
   }, []);
 
   useEffect(() => {
@@ -182,37 +182,19 @@ const Dashboard = () => {
     }
   }, [threshold, balanceData.currentBalance]);
 
-  // Initial data check
-  useEffect(() => {
-    const checkUserData = async () => {
-      try {
-        const response = await fetch(
-          `${process.env.REACT_APP_API_URL}/income`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
-        const data = await response.json();
-        setHasData(data.incomes && data.incomes.length > 0);
-      } catch (error) {
-        console.error("Error checking user data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkUserData();
-  }, []);
-
-  // Fetch dashboard data
+  // Fetch dashboard data when hasData is true
   useEffect(() => {
     if (hasData) {
       const fetchDashboardData = async () => {
         try {
-          // Fetch balance data and recent transactions in parallel
-          const [incomeResponse, expenseResponse] = await Promise.all([
+          // Fetch all necessary data in parallel
+          const [
+            incomeResponse,
+            expenseResponse,
+            primaryGoalResponse,
+            recentIncomeRes,
+            recentExpenseRes,
+          ] = await Promise.all([
             fetch(`${process.env.REACT_APP_API_URL}/income/total`, {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -223,27 +205,11 @@ const Dashboard = () => {
                 Authorization: `Bearer ${localStorage.getItem("token")}`,
               },
             }),
-          ]);
-
-          const [incomeData, expenseData] = await Promise.all([
-            incomeResponse.json(),
-            expenseResponse.json(),
-          ]);
-
-          // Calculate total income and expenses
-          const totalIncome = parseFloat(incomeData.total || 0);
-          const totalExpenses = parseFloat(expenseData.total || 0);
-
-          // Set balance data with correct calculations
-          setBalanceData({
-            totalBalance: totalIncome, // Net total of all income
-            currentBalance: totalIncome - totalExpenses, // Income minus expenses
-            monthlyExpenses: totalExpenses,
-            expenseChange: 0, // Calculate if needed
-          });
-
-          // Fetch recent transactions
-          const [recentIncomeRes, recentExpenseRes] = await Promise.all([
+            fetch(`${process.env.REACT_APP_API_URL}/goals/primary`, {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }),
             fetch(`${process.env.REACT_APP_API_URL}/income/recent`, {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -256,10 +222,34 @@ const Dashboard = () => {
             }),
           ]);
 
-          const [recentIncome, recentExpense] = await Promise.all([
+          const [
+            incomeData,
+            expenseData,
+            primaryGoalData,
+            recentIncome,
+            recentExpense,
+          ] = await Promise.all([
+            incomeResponse.json(),
+            expenseResponse.json(),
+            primaryGoalResponse.json(),
             recentIncomeRes.json(),
             recentExpenseRes.json(),
           ]);
+
+          // Update all state at once
+          const totalIncome = parseFloat(incomeData.total || 0);
+          const totalExpenses = parseFloat(expenseData.total || 0);
+
+          setBalanceData({
+            totalBalance: totalIncome,
+            currentBalance: totalIncome - totalExpenses,
+            monthlyExpenses: totalExpenses,
+            expenseChange: 0,
+          });
+
+          if (primaryGoalData.success) {
+            setPrimaryGoal(primaryGoalData.goal);
+          }
 
           // Combine and sort transactions
           const allTransactions = [
@@ -277,7 +267,6 @@ const Dashboard = () => {
 
           setRecentTransactions(allTransactions);
 
-          // Update balance changes based on most recent transaction
           if (allTransactions.length > 0) {
             const latest = allTransactions[0];
             setBalanceChanges({
@@ -288,9 +277,7 @@ const Dashboard = () => {
             });
           }
 
-          // After all data is loaded, set visibility to true
           setIsLoading(false);
-          // Small delay to ensure smooth transition
           setTimeout(() => setIsVisible(true), 200);
         } catch (error) {
           console.error("Error fetching dashboard data:", error);
@@ -303,7 +290,7 @@ const Dashboard = () => {
     }
   }, [hasData]);
 
-  // Only fetch categories if needed for initial setup
+  // Only fetch categories for initial setup
   useEffect(() => {
     if (!hasData) {
       const fetchCategories = async () => {
