@@ -120,11 +120,11 @@ const Sidebar = ({ isOpen, onClose }) => {
 
         <div className="flex-1 overflow-y-auto">
           <nav className="p-4 space-y-2">
-            {menuItems.map((item) => (
+            {menuItems.map((item, index) => (
               <Link
                 key={item.name}
                 to={item.path}
-                onClick={onClose} // Close sidebar on mobile when clicking a link
+                onClick={onClose}
                 className={`flex items-center ${
                   isCollapsed ? "justify-center" : "px-4"
                 } py-3 text-gray-300 rounded-lg transition-colors group relative
@@ -147,8 +147,14 @@ const Sidebar = ({ isOpen, onClose }) => {
                 {/* Tooltip - Only show on desktop when collapsed */}
                 {isCollapsed && !isOpen && (
                   <div
-                    className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded-md 
-                    opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 hidden md:block"
+                    className="fixed left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded-md 
+                    opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap 
+                    hidden md:block pointer-events-none"
+                    style={{
+                      top: `${11 + index * 48 + 8}px`, // Adjusted top position for better alignment
+                      left: "5.5rem", // Adjusted left position for better spacing
+                      zIndex: 9999,
+                    }}
                   >
                     {item.name}
                     <div className="text-xs text-gray-400">
@@ -183,8 +189,14 @@ const Sidebar = ({ isOpen, onClose }) => {
             {/* Tooltip - Only show on desktop when collapsed */}
             {isCollapsed && !isOpen && (
               <div
-                className="absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded-md 
-                opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 hidden md:block"
+                className="fixed left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded-md 
+                opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap 
+                hidden md:block pointer-events-none"
+                style={{
+                  top: "1.5rem",
+                  transform: "translateY(0)",
+                  zIndex: 9999,
+                }}
               >
                 Logout
                 <div className="text-xs text-gray-400">

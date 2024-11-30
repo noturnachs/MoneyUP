@@ -45,11 +45,13 @@ const AppLayout = ({ children }) => {
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <Navbar onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)} />
-      <div className="flex h-[calc(100vh-64px)]">
-        <Sidebar
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
-        />{" "}
+      <div className="flex h-[calc(100vh-64px)] relative">
+        <div className="z-[1]">
+          <Sidebar
+            isOpen={isSidebarOpen}
+            onClose={() => setIsSidebarOpen(false)}
+          />
+        </div>
         <main className="flex-1 p-6 overflow-auto">{children}</main>
       </div>
     </div>
