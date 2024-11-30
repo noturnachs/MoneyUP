@@ -6,8 +6,12 @@ import {
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
-const Navbar = ({ onMenuClick, isCollapsed }) => {
-  const { user } = useAuth();
+const Navbar = ({ onMenuClick, isCollapsed, setIsSidebarOpen }) => {
+  const { user, loading } = useAuth();
+
+  console.log("User data in Navbar:", user);
+
+  const displayUsername = user?.username || user?.user?.username || "User";
 
   return (
     <nav className="bg-gray-800 border-b border-gray-700">
@@ -15,33 +19,43 @@ const Navbar = ({ onMenuClick, isCollapsed }) => {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
             {user && (
-              <button
-                onClick={onMenuClick}
-                className="text-gray-400 hover:text-white focus:outline-none hidden md:block"
-              >
-                {isCollapsed ? (
-                  <ChevronRightIcon className="h-6 w-6" />
-                ) : (
-                  <ChevronLeftIcon className="h-6 w-6" />
-                )}
-              </button>
+              <>
+                {/* Mobile menu button */}
+                <button
+                  onClick={() => setIsSidebarOpen(true)}
+                  className="text-gray-400 hover:text-white focus:outline-none md:hidden"
+                >
+                  <Bars3Icon className="h-6 w-6" />
+                </button>
+                {/* Desktop collapse button */}
+                <button
+                  onClick={onMenuClick}
+                  className="text-gray-400 hover:text-white focus:outline-none hidden md:block"
+                >
+                  {isCollapsed ? (
+                    <ChevronRightIcon className="h-6 w-6" />
+                  ) : (
+                    <ChevronLeftIcon className="h-6 w-6" />
+                  )}
+                </button>
+              </>
             )}
             <div className="ml-4 text-xl font-bold text-white">
               Money<span className="text-green-500">Up</span>
             </div>
           </div>
           <div className="flex items-center">
-            {user ? (
-              <div className="flex items-center space-x-4">
-                <span className=" font-bold text-green-500">
-                  {user.username}
-                </span>
-                {/* <button
-                  onClick={logout}
-                  className="text-gray-300 hover:text-white"
-                >
-                  Logout
-                </button> */}
+            {loading ? (
+              <div className="animate-pulse">
+                <div className="h-8 w-24 bg-gray-700 rounded"></div>
+              </div>
+            ) : user ? (
+              <div className="flex items-center space-x-3">
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-gray-200">
+                    {displayUsername}
+                  </span>
+                </div>
               </div>
             ) : (
               <div className="flex items-center space-x-4">

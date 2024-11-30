@@ -49,6 +49,8 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
+      console.log("Login attempt for:", credentials.identifier); // Debug log
+
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/auth/login`,
         {
@@ -56,22 +58,31 @@ export const AuthProvider = ({ children }) => {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(credentials),
+          body: JSON.stringify({
+            identifier: credentials.identifier,
+            password: credentials.password,
+          }),
         }
       );
 
       const data = await response.json();
 
-      if (response.ok) {
+      if (response.ok && data.token) {
         localStorage.setItem("token", data.token);
         await fetchUserData();
         return { success: true };
       } else {
-        return { success: false, error: data.message };
+        return {
+          success: false,
+          error: data.message || "Login failed",
+        };
       }
     } catch (error) {
       console.error("Login error:", error);
-      return { success: false, error: "An error occurred during login" };
+      return {
+        success: false,
+        error: "An error occurred during login",
+      };
     }
   };
 

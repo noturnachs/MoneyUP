@@ -68,6 +68,7 @@ const AppLayout = ({ children }) => {
       <Navbar
         onMenuClick={() => setIsCollapsed(!isCollapsed)}
         isCollapsed={isCollapsed}
+        setIsSidebarOpen={setIsSidebarOpen}
       />
       <div className="flex h-[calc(100vh-64px)] relative">
         <div className="z-[1]">

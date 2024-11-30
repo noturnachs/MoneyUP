@@ -104,8 +104,18 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
+    console.log("Full request body:", req.body); // Debug log for entire body
+
     // Get identifier (email or username) and password from request
     const { identifier, password } = req.body;
+
+    if (!identifier || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Identifier and password are required",
+        received: req.body,
+      });
+    }
 
     console.log("Login attempt for:", identifier); // Debug log
 
@@ -161,7 +171,7 @@ exports.login = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "An error occurred during login",
-      error: error.message, // Include error message in development
+      error: error.message,
     });
   }
 };
@@ -299,41 +309,34 @@ exports.updateProfile = async (req, res) => {
 };
 
 exports.deleteAccount = async (req, res) => {
-  const connection = await db.getConnection();
+  const client = await db.getConnection();
 
   try {
+    await client.query("BEGIN");
+
     const userId = req.user.id;
 
-    // Begin transaction
-    await connection.beginTransaction();
+    // Update user's account_status to 'deleted'
+    await client.query(
+      "UPDATE users SET account_status = 'deleted' WHERE user_id = $1",
+      [userId]
+    );
 
-    try {
-      // Update user's account_status to 'deleted'
-      await connection.execute(
-        "UPDATE users SET account_status = 'deleted' WHERE user_id = ?",
-        [userId]
-      );
+    await client.query("COMMIT");
 
-      // Commit transaction
-      await connection.commit();
-
-      res.json({
-        success: true,
-        message: "Account deleted successfully",
-      });
-    } catch (error) {
-      // Rollback in case of error
-      await connection.rollback();
-      throw error;
-    }
+    res.json({
+      success: true,
+      message: "Account deleted successfully",
+    });
   } catch (error) {
+    await client.query("ROLLBACK");
     console.error("Error deleting account:", error);
     res.status(500).json({
       success: false,
       message: "Error deleting account",
     });
   } finally {
-    connection.release(); // Release the connection back to the pool
+    client.release(); // Release the client back to the pool
   }
 };
 

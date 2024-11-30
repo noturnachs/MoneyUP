@@ -25,29 +25,18 @@ const Login = () => {
     setIsLoading(true);
     setError("");
 
+    console.log("Login attempt with:", formData); // Debug log
+
     try {
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/auth/login`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            identifier: formData.identifier,
-            password: formData.password,
-          }),
-        }
-      );
+      const result = await login({
+        identifier: formData.identifier,
+        password: formData.password,
+      });
 
-      const data = await response.json();
-
-      if (response.ok && data.token) {
-        localStorage.setItem("token", data.token);
-        login(data.user);
+      if (result.success) {
         navigate("/dashboard");
       } else {
-        setError(data.message || "Login failed");
+        setError(result.error || "Login failed");
       }
     } catch (error) {
       console.error("Login error:", error);

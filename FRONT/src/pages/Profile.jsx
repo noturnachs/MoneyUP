@@ -17,12 +17,13 @@ const Profile = () => {
   });
 
   useEffect(() => {
-    if (user) {
+    console.log("Current user data:", user);
+    if (user?.user) {
       setFormData((prev) => ({
         ...prev,
-        firstName: user.firstName || "",
-        lastName: user.lastName || "",
-        email: user.email || "",
+        firstName: user.user.firstName || "",
+        lastName: user.user.lastName || "",
+        email: user.user.email || "",
       }));
       setTimeout(() => setIsVisible(true), 100);
     }
