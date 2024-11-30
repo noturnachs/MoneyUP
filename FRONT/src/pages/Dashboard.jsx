@@ -707,7 +707,7 @@ const Dashboard = () => {
         </div>
 
         <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
-          <h3 className="text-gray-400 text-sm font-medium">Expenses</h3>
+          <h3 className="text-gray-400 text-sm font-medium">Total Expenses</h3>
           <div className="mt-2 space-y-1">
             <p className="text-2xl font-bold text-red-500">
               ₱
