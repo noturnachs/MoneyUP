@@ -424,35 +424,60 @@ exports.getMe = async (req, res) => {
 
 exports.getProfile = async (req, res) => {
   try {
-    const { rows } = await db.execute(
-      `SELECT user_id, username, email, first_name, last_name 
-       FROM users 
-       WHERE user_id = $1`,
-      [req.user.id]
+    const userId = req.user.id;
+    console.log("Fetching profile for user ID:", userId);
+
+    // First get user data
+    const userQuery = await db.execute(
+      `SELECT u.user_id, u.email, u.username, u.first_name, u.last_name
+       FROM users u
+       WHERE u.user_id = $1`,
+      [userId]
     );
 
-    if (rows.length === 0) {
+    if (userQuery.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: "User not found",
       });
     }
 
+    // Then get subscription data
+    const subscriptionQuery = await db.execute(
+      `SELECT tier, is_active, start_date, end_date 
+       FROM subscriptions 
+       WHERE user_id = $1 
+       AND is_active = true`,
+      [userId]
+    );
+
+    const user = userQuery.rows[0];
+    const subscription = subscriptionQuery.rows[0] || {
+      tier: "free",
+      is_active: true,
+    };
+
+    // Send response with both user and subscription data
     res.json({
       success: true,
-      user: {
-        id: rows[0].user_id,
-        username: rows[0].username,
-        email: rows[0].email,
-        firstName: rows[0].first_name,
-        lastName: rows[0].last_name,
+      id: user.user_id,
+      email: user.email,
+      username: user.username,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      subscription: {
+        tier: subscription.tier,
+        isActive: subscription.is_active,
+        startDate: subscription.start_date,
+        endDate: subscription.end_date,
       },
     });
   } catch (error) {
-    console.error("Error fetching profile:", error);
+    console.error("Profile fetch error:", error);
     res.status(500).json({
       success: false,
       message: "Error fetching profile",
+      error: error.message,
     });
   }
 };

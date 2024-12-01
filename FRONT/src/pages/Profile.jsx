@@ -22,14 +22,14 @@ const Profile = () => {
 
   useEffect(() => {
     console.log("Current user data:", user);
-    if (user?.user) {
+    if (user) {
       setFormData((prev) => ({
         ...prev,
-        firstName: user.user.firstName || "",
-        lastName: user.user.lastName || "",
-        email: user.user.email || "",
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        email: user.email || "",
       }));
-      setOriginalEmail(user.user.email || "");
+      setOriginalEmail(user.email || "");
       setTimeout(() => setIsVisible(true), 100);
     }
   }, [user]);

@@ -29,7 +29,14 @@ export const AuthProvider = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
-        setUser(data);
+        setUser({
+          id: data.id,
+          email: data.email,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          username: data.username,
+          subscription: data.subscription,
+        });
       } else {
         localStorage.removeItem("token");
         setUser(null);
@@ -89,13 +96,23 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const isProUser = () => {
+    return (
+      user?.subscription?.tier === "pro" ||
+      user?.subscription?.tier === "enterprise"
+    );
+  };
+
   const value = {
     user,
     loading,
     login,
     logout,
     fetchUserData,
+    isProUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
+
+export default AuthContext;

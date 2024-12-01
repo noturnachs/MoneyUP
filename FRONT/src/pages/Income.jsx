@@ -29,7 +29,7 @@ const Income = () => {
     fetchData();
   }, []);
 
-  const fetchIncomeHistory = async () => {
+  const fetchIncomeHistory = async (date) => {
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/income`, {
         headers: {
@@ -75,6 +75,8 @@ const Income = () => {
     }
 
     try {
+      const now = new Date();
+      const clientDate = now.toISOString();
       const response = await fetch(`${process.env.REACT_APP_API_URL}/income`, {
         method: "POST",
         headers: {
@@ -85,12 +87,14 @@ const Income = () => {
           amount: parseFloat(newIncome),
           description: incomeDescription,
           category_id: selectedCategory,
-          date: new Date().toISOString(),
+          date: clientDate,
+          clientDate: clientDate,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         }),
       });
 
       if (response.ok) {
-        await fetchIncomeHistory();
+        await fetchIncomeHistory(clientDate);
         setNewIncome("");
         setIncomeDescription("");
         setSelectedCategory("");

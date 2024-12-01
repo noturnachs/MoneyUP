@@ -5,6 +5,15 @@ const db = require("./config/database");
 const errorHandler = require("./middleware/errorHandler");
 const { testEmailConnection } = require("./utils/emailService");
 
+// Import routes
+const authRoutes = require("./routes/auth");
+const incomeRoutes = require("./routes/income");
+const expenseRoutes = require("./routes/expenses");
+const categoryRoutes = require("./routes/categories");
+const analyticsRoutes = require("./routes/analytics");
+const goalRoutes = require("./routes/goals");
+const subscriptionRoutes = require("./routes/subscriptions");
+
 const app = express();
 
 // Middleware
@@ -24,7 +33,7 @@ const testConnection = async () => {
 
 testConnection();
 
-// Add this after your other startup code
+// Email service test
 testEmailConnection().then((isConnected) => {
   if (isConnected) {
     console.log("✉️ Email service connected successfully");
@@ -34,12 +43,13 @@ testEmailConnection().then((isConnected) => {
 });
 
 // Routes
-app.use("/api/auth", require("./routes/auth"));
-app.use("/api/income", require("./routes/income"));
-app.use("/api/expenses", require("./routes/expenses"));
-app.use("/api/categories", require("./routes/categories"));
-app.use("/api/analytics", require("./routes/analytics"));
-app.use("/api/goals", require("./routes/goals"));
+app.use("/api/auth", authRoutes);
+app.use("/api/income", incomeRoutes);
+app.use("/api/expenses", expenseRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use("/api/analytics", analyticsRoutes);
+app.use("/api/goals", goalRoutes);
+app.use("/api/subscriptions", subscriptionRoutes);
 
 // Error handling middleware
 app.use(errorHandler);
