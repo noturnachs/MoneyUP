@@ -8,13 +8,17 @@ exports.getAll = async (req, res) => {
        FROM income i 
        LEFT JOIN categories c ON i.category_id = c.category_id 
        WHERE i.user_id = $1 
-       ORDER BY i.created_at DESC`,
+       ORDER BY i.date DESC, i.created_at DESC`,
       [req.user.id]
     );
 
     res.json({
       success: true,
-      incomes,
+      incomes: incomes.map((income) => ({
+        ...income,
+        created_at: new Date(income.created_at).toISOString(),
+        date: new Date(income.date).toISOString(),
+      })),
     });
   } catch (error) {
     console.error("Error fetching income:", error);
@@ -27,12 +31,15 @@ exports.getAll = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
+    const now = new Date();
+
     const incomeData = {
       user_id: req.user.id,
       amount: req.body.amount,
       description: req.body.description,
-      date: req.body.date || new Date(),
       category_id: req.body.category_id || null,
+      created_at: now,
+      date: now,
     };
 
     if (!incomeData.user_id || !incomeData.amount || !incomeData.description) {
@@ -46,7 +53,11 @@ exports.create = async (req, res) => {
     res.status(201).json({
       success: true,
       id: income.income_id,
-      income,
+      income: {
+        ...income,
+        created_at: income.created_at.toISOString(),
+        date: income.date.toISOString(),
+      },
       message: "Income created successfully",
     });
   } catch (error) {

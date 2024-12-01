@@ -6,7 +6,18 @@ class GoalController {
   static async createGoal(req, res) {
     try {
       const { amount, description, targetDate } = req.body;
-      const errors = validateGoal({ amount, description, targetDate });
+      const now = new Date();
+
+      // Set default target date if none provided
+      const finalTargetDate = targetDate
+        ? new Date(targetDate)
+        : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      const errors = validateGoal({
+        amount,
+        description,
+        targetDate: finalTargetDate,
+      });
 
       if (errors.length > 0) {
         return res.status(400).json({
@@ -16,13 +27,31 @@ class GoalController {
         });
       }
 
+      // Log the data being sent to create
+      console.log("Creating goal with data:", {
+        amount,
+        description,
+        target_date: finalTargetDate,
+        created_at: now,
+      });
+
       const goal = await Goal.create(req.user.id, {
         amount,
         description,
-        targetDate,
+        target_date: finalTargetDate,
       });
 
-      res.json({ success: true, goal });
+      res.json({
+        success: true,
+        goal: {
+          ...goal,
+          created_at: goal.created_at.toISOString(),
+          target_date: goal.target_date.toISOString(),
+          date_completed: goal.date_completed
+            ? new Date(goal.date_completed).toISOString()
+            : null,
+        },
+      });
     } catch (error) {
       console.error("Error in createGoal:", error);
       res.status(500).json({
@@ -36,7 +65,21 @@ class GoalController {
   static async getGoals(req, res) {
     try {
       const goals = await Goal.findByUserId(req.user.id);
-      res.json({ success: true, goals });
+      res.json({
+        success: true,
+        goals: goals.map((goal) => ({
+          ...goal,
+          created_at: goal.created_at
+            ? new Date(goal.created_at).toISOString()
+            : null,
+          target_date: goal.target_date
+            ? new Date(goal.target_date).toISOString()
+            : null,
+          date_completed: goal.date_completed
+            ? new Date(goal.date_completed).toISOString()
+            : null,
+        })),
+      });
     } catch (error) {
       console.error("Error in getGoals:", error);
       res.status(500).json({
@@ -51,12 +94,22 @@ class GoalController {
     try {
       const { id } = req.params;
       const { amount, description, targetDate } = req.body;
+      const now = new Date();
+
+      // Ensure target_date is not null when updating
+      if (!targetDate) {
+        return res.status(400).json({
+          success: false,
+          message: "Target date is required",
+        });
+      }
 
       const { isValid, errors } = validateGoal({
         amount,
         description,
         targetDate,
       });
+
       if (!isValid) {
         return res.status(400).json({
           success: false,
@@ -67,7 +120,8 @@ class GoalController {
       const goal = await Goal.update(id, req.user.id, {
         amount,
         description,
-        targetDate,
+        target_date: new Date(targetDate),
+        updated_at: now,
       });
 
       if (!goal) {
@@ -77,9 +131,23 @@ class GoalController {
         });
       }
 
-      res.json({ success: true, goal });
+      res.json({
+        success: true,
+        goal: {
+          ...goal,
+          created_at: new Date(goal.created_at).toISOString(),
+          updated_at: new Date(goal.updated_at).toISOString(),
+          target_date: new Date(goal.target_date).toISOString(),
+          date_completed: goal.date_completed
+            ? new Date(goal.date_completed).toISOString()
+            : null,
+        },
+      });
     } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
     }
   }
 
@@ -131,16 +199,14 @@ class GoalController {
     try {
       await client.query("BEGIN");
 
-      const { amount } = req.body;
-
-      // Mark goal as completed with completion date
+      const now = new Date();
       const { rows } = await client.query(
         `UPDATE goals 
          SET is_completed = true,
-             date_completed = CURRENT_DATE
+             date_completed = $3
          WHERE goal_id = $1 AND user_id = $2
          RETURNING *`,
-        [req.params.id, req.user.id]
+        [req.params.id, req.user.id, now]
       );
 
       if (rows.length === 0) {
@@ -156,7 +222,18 @@ class GoalController {
       res.json({
         success: true,
         message: "Goal marked as accomplished",
-        goal: rows[0],
+        goal: {
+          ...rows[0],
+          created_at: rows[0].created_at
+            ? new Date(rows[0].created_at).toISOString()
+            : null,
+          target_date: rows[0].target_date
+            ? new Date(rows[0].target_date).toISOString()
+            : null,
+          date_completed: rows[0].date_completed
+            ? new Date(rows[0].date_completed).toISOString()
+            : null,
+        },
       });
     } catch (error) {
       await client.query("ROLLBACK");

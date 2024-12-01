@@ -16,14 +16,15 @@ class Income {
     try {
       await client.query("BEGIN");
 
-      const { user_id, amount, description, date, category_id } = incomeData;
+      const { user_id, amount, description, date, created_at, category_id } =
+        incomeData;
 
       const { rows } = await client.query(
         `INSERT INTO income 
-         (user_id, category_id, amount, description, date) 
-         VALUES ($1, $2, $3, $4, $5)
+         (user_id, category_id, amount, description, date, created_at) 
+         VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING *`,
-        [user_id, category_id, amount, description, date || new Date()]
+        [user_id, category_id, amount, description, date, created_at]
       );
 
       await client.query("COMMIT");

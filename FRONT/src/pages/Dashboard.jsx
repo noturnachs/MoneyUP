@@ -8,6 +8,8 @@ import { ring } from "ldrs";
 // Initialize the loader (needs to be done once)
 ring.register();
 
+const timestamp = new Date();
+
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString("en-US", {
     month: "long",
@@ -15,6 +17,8 @@ const formatDate = (date) => {
     year: "numeric",
   });
 };
+
+const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -78,24 +82,24 @@ const Dashboard = () => {
     }
 
     try {
-      const incomeResponse = await fetch(
-        `${process.env.REACT_APP_API_URL}/income`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: JSON.stringify({
-            amount: initialBalance,
-            description: "Initial Balance",
-            category_id: selectedCategory,
-            date: new Date().toISOString(),
-          }),
-        }
-      );
+      const now = new Date();
+      const isoTime = now.toISOString();
 
-      if (!incomeResponse.ok) {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/income`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          amount: initialBalance,
+          description: "Initial Balance",
+          category_id: selectedCategory,
+          created_at: isoTime,
+        }),
+      });
+
+      if (!response.ok) {
         throw new Error("Failed to set initial balance");
       }
 
@@ -612,10 +616,12 @@ const Dashboard = () => {
                 {balanceChanges.lastChangeDate && (
                   <span className="text-gray-400 ml-2 text-xs">
                     {new Date(balanceChanges.lastChangeDate).toLocaleTimeString(
-                      [],
+                      "en-US",
                       {
                         hour: "2-digit",
                         minute: "2-digit",
+                        hour12: true,
+                        timeZone: userTimezone,
                       }
                     )}
                   </span>
@@ -937,17 +943,24 @@ const Dashboard = () => {
                     <td className="p-3 sm:p-4">
                       <div className="flex flex-col sm:flex-row sm:items-center">
                         <span>
-                          {new Date(
-                            transaction.created_at
-                          ).toLocaleDateString()}
+                          {new Date(transaction.created_at).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "long",
+                              day: "numeric",
+                              year: "numeric",
+                              timeZone: userTimezone,
+                            }
+                          )}
                         </span>
                         <span className="text-gray-500 text-xs sm:text-sm sm:ml-2">
                           {new Date(transaction.created_at).toLocaleTimeString(
-                            [],
+                            "en-US",
                             {
                               hour: "2-digit",
                               minute: "2-digit",
                               hour12: true,
+                              timeZone: userTimezone,
                             }
                           )}
                         </span>

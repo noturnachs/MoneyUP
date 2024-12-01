@@ -6,8 +6,9 @@ exports.create = async (req, res) => {
   try {
     await client.query("BEGIN");
 
-    const { amount, description, category_id, date } = req.body;
+    const { amount, description, category_id } = req.body;
     const userId = req.user.id;
+    const now = new Date();
 
     // Get current balance and threshold
     const { rows: balanceResult } = await client.query(
@@ -18,7 +19,6 @@ exports.create = async (req, res) => {
       [userId]
     );
 
-    // Make sure we have results
     if (!balanceResult || balanceResult.length === 0) {
       throw new Error("Could not retrieve balance information");
     }
@@ -40,14 +40,14 @@ exports.create = async (req, res) => {
       )}`;
     }
 
-    // Insert the expense
+    // Insert the expense with both date fields
     const {
       rows: [expense],
     } = await client.query(
-      `INSERT INTO expenses (user_id, amount, description, category_id, date) 
-       VALUES ($1, $2, $3, $4, $5) 
+      `INSERT INTO expenses (user_id, amount, description, category_id, date, created_at) 
+       VALUES ($1, $2, $3, $4, $5, $5) 
        RETURNING expense_id`,
-      [userId, amount, description, category_id, date]
+      [userId, amount, description, category_id, now]
     );
 
     // Fetch the created expense with category name
@@ -68,6 +68,8 @@ exports.create = async (req, res) => {
       expense: {
         ...expenseWithCategory,
         amount: parseFloat(expenseWithCategory.amount),
+        created_at: expenseWithCategory.created_at.toISOString(),
+        date: expenseWithCategory.date.toISOString(),
       },
       warning,
       newBalance: balanceAfterExpense,
@@ -92,7 +94,7 @@ exports.getAll = async (req, res) => {
        FROM expenses e 
        LEFT JOIN categories c ON e.category_id = c.category_id 
        WHERE e.user_id = $1 
-       ORDER BY e.created_at DESC`,
+       ORDER BY e.date DESC, e.created_at DESC`,
       [req.user.id]
     );
 
@@ -101,6 +103,8 @@ exports.getAll = async (req, res) => {
       expenses: rows.map((expense) => ({
         ...expense,
         amount: parseFloat(expense.amount),
+        created_at: new Date(expense.created_at).toISOString(),
+        date: new Date(expense.date).toISOString(),
       })),
     });
   } catch (error) {
@@ -108,7 +112,6 @@ exports.getAll = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to fetch expenses",
-      error: error.message,
     });
   }
 };
