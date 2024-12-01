@@ -23,10 +23,12 @@ exports.register = async (req, res) => {
       lastName,
       first_name,
       last_name,
+      plan,
     } = req.body;
 
     const finalFirstName = firstName || first_name;
     const finalLastName = lastName || last_name;
+    const finalPlan = plan?.toLowerCase() || "basic";
 
     console.log("Registration data:", {
       email,
@@ -89,6 +91,23 @@ exports.register = async (req, res) => {
       ]
     );
 
+    // Create subscription
+    const now = new Date();
+    const endDate =
+      finalPlan === "basic"
+        ? null // Basic plans don't expire
+        : new Date(now.setMonth(now.getMonth() + 1)); // Pro plans last 1 month
+
+    const {
+      rows: [subscription],
+    } = await client.query(
+      `INSERT INTO subscriptions 
+       (user_id, tier, start_date, end_date, is_active) 
+       VALUES ($1, $2, CURRENT_TIMESTAMP, $3, true) 
+       RETURNING id, user_id, tier, start_date, end_date, is_active`,
+      [newUser.user_id, finalPlan, endDate]
+    );
+
     await client.query("COMMIT");
 
     // Send verification email
@@ -105,6 +124,14 @@ exports.register = async (req, res) => {
         firstName: newUser.first_name,
         lastName: newUser.last_name,
         name: newUser.name,
+        subscription: {
+          id: subscription.id,
+          userId: subscription.user_id,
+          tier: subscription.tier,
+          isActive: subscription.is_active,
+          startDate: subscription.start_date,
+          endDate: subscription.end_date,
+        },
       },
     });
   } catch (error) {
