@@ -16,7 +16,7 @@ const Pricing = () => {
       featured: true,
     },
     {
-      name: "Pro - coming soon",
+      name: "Pro",
       price: "₱299",
       period: "/month",
       features: [
@@ -27,7 +27,7 @@ const Pricing = () => {
         "Budget Goals & Alerts",
         "Recurring Expenses",
       ],
-      cta: "Coming Soon",
+      cta: "Subscribe Now",
       featured: false,
     },
     {
@@ -87,11 +87,18 @@ const Pricing = () => {
                   )}
                 </p>
                 <Link
-                  to={plan.name === "Basic" ? "/register" : "#"}
+                  to={
+                    plan.name === "Basic"
+                      ? "/register"
+                      : plan.name === "Pro"
+                      ? "/register"
+                      : "#"
+                  }
+                  state={{ plan: plan.name.toLowerCase() }}
                   className={`mt-8 block w-full py-3 px-6 rounded-md text-center font-medium 
                     transition-all duration-300 ease-in-out transform 
                     ${
-                      plan.name === "Basic"
+                      plan.name === "Basic" || plan.name === "Pro"
                         ? "bg-purple-600 hover:bg-purple-700 text-white hover:scale-105 hover:shadow-lg"
                         : "bg-gray-800 text-gray-400 cursor-not-allowed opacity-75"
                     }`}
