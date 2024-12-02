@@ -6,6 +6,7 @@ import {
   ChartPieIcon,
   ArrowTrendingUpIcon,
   BellIcon,
+  ArrowDownTrayIcon,
 } from "@heroicons/react/24/outline";
 import { useState, useEffect, useRef } from "react";
 import { motion, useAnimation, useScroll, useInView } from "framer-motion";
@@ -87,6 +88,12 @@ const Landing = () => {
       title: "Set Thresholds",
       description:
         "Stay on track with spending alerts by setting limits and receiving reminders if you exceed them.",
+    },
+    {
+      icon: ArrowDownTrayIcon,
+      title: "Export Data",
+      description:
+        "Easily export your data for analysis, sharing, or backup with just a few clicks.",
     },
   ];
 
@@ -657,7 +664,7 @@ const Landing = () => {
           >
             <div className="px-4 py-8 sm:px-12 sm:py-16 space-y-6 sm:space-y-0 lg:flex lg:items-center lg:justify-between">
               <div className="text-center lg:text-left">
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-white sm:text-4xl">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-white ">
                   {user ? (
                     <span className="block">Welcome back!</span>
                   ) : (
