@@ -13,6 +13,7 @@ const categoryRoutes = require("./routes/categories");
 const analyticsRoutes = require("./routes/analytics");
 const goalRoutes = require("./routes/goals");
 const subscriptionRoutes = require("./routes/subscriptions");
+const paymentRoutes = require("./routes/payments");
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/goals", goalRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
+app.use("/api/payments", paymentRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

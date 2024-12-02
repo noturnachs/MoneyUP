@@ -1,5 +1,6 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import PayPalButton from "../components/payments/PaypalButton";
 
 const plans = [
   {
@@ -47,6 +48,8 @@ const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState(null);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [showPayPal, setShowPayPal] = useState(false);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -105,6 +108,44 @@ const Register = () => {
     }
   };
 
+  const handlePayPalSuccess = async (paymentDetails) => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/payments/verify-paypal`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            orderID: paymentDetails.id,
+            registrationData: formData,
+            paymentDetails: paymentDetails,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        navigate("/login", {
+          state: {
+            message:
+              "Registration and payment successful! Please check your email to verify your account.",
+          },
+        });
+      } else {
+        setError(data.message || "Payment verification failed");
+      }
+    } catch (error) {
+      setError("An error occurred during payment verification");
+      console.error("Payment verification error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -125,6 +166,12 @@ const Register = () => {
 
     if (formData.username.length < 3) {
       setError("Username must be at least 3 characters long");
+      setIsLoading(false);
+      return;
+    }
+
+    if (formData.plan === "pro") {
+      setShowPayPal(true);
       setIsLoading(false);
       return;
     }
@@ -421,6 +468,23 @@ const Register = () => {
               Sign in
             </button>
           </div>
+
+          {showPayPal && (
+            <div className="mt-4">
+              <PayPalButton
+                amount="299.00"
+                onSuccess={handlePayPalSuccess}
+                onCancel={() => setShowPayPal(false)}
+                registrationData={formData}
+              />
+              <button
+                onClick={() => setShowPayPal(false)}
+                className="mt-4 w-full text-gray-400 hover:text-white"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </div>
