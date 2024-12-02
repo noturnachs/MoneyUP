@@ -50,7 +50,7 @@ const PayPalButton = ({ amount, onSuccess, onCancel, registrationData }) => {
 
       onApprove: async (data, actions) => {
         if (isProcessing.current) {
-          console.log("Payment already being processed");
+          //console.log("Payment already being processed");
           return;
         }
 
@@ -59,12 +59,12 @@ const PayPalButton = ({ amount, onSuccess, onCancel, registrationData }) => {
 
           // Capture the order and get the details
           const captureData = await actions.order.capture();
-          console.log("Capture Data:", captureData);
+          // console.log("Capture Data:", captureData);
 
           // Call handleSuccess with the capture data
           handleSuccess(captureData);
         } catch (err) {
-          console.error("Payment processing error:", err);
+          //console.error("Payment processing error:", err);
           setError(err.message);
           handleCancel();
         } finally {
@@ -73,19 +73,19 @@ const PayPalButton = ({ amount, onSuccess, onCancel, registrationData }) => {
       },
 
       onCancel: (data) => {
-        console.log("Payment cancelled:", data);
+        //console.log("Payment cancelled:", data);
         handleCancel();
       },
 
       onError: (err) => {
-        console.error("PayPal Checkout error:", err);
+        //console.error("PayPal Checkout error:", err);
         setError(err.message);
         isProcessing.current = false;
       },
     });
 
     paypalButtonsComponent.render("#paypal-button-container").catch((err) => {
-      console.error("PayPal button render error:", err);
+      //console.error("PayPal button render error:", err);
       setError("Failed to load PayPal button");
     });
 
@@ -93,7 +93,7 @@ const PayPalButton = ({ amount, onSuccess, onCancel, registrationData }) => {
       try {
         paypalButtonsComponent.close();
       } catch (err) {
-        console.error("Error closing PayPal buttons:", err);
+        //console.error("Error closing PayPal buttons:", err);
       }
     };
   }, [amount, handleSuccess, handleCancel, registrationData]);
