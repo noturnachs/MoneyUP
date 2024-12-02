@@ -5,7 +5,8 @@ import PayPalButton from "../components/payments/PaypalButton";
 const plans = [
   {
     name: "Free",
-    price: "Free",
+    price: "₱0",
+    period: "/month",
     features: [
       "Basic Expense Tracking",
       "Monthly Summary Analytics",
@@ -380,7 +381,7 @@ const Register = () => {
               <label className="block text-sm font-medium text-gray-200">
                 Select Plan
               </label>
-              <div className="grid grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8">
                 {plans.slice(0, 2).map((plan) => (
                   <button
                     key={plan.name}
@@ -394,7 +395,7 @@ const Register = () => {
                         setShowPayPal(false);
                       }
                     }}
-                    className={`p-8 rounded-lg text-left ${
+                    className={`flex flex-col items-start p-4 sm:p-8 rounded-lg text-left ${
                       formData.plan === plan.name.toLowerCase()
                         ? "bg-purple-900/50 border-2 border-purple-500"
                         : "bg-gray-900/50 border border-gray-700 hover:border-purple-400"
