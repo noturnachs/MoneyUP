@@ -14,10 +14,24 @@ import {
   PieChart,
   Pie,
   Cell,
+  Legend,
 } from "recharts";
 import { Dialog, Transition } from "@headlessui/react";
 import { Fragment } from "react";
 import ExportAnalytics from "../components/exports/ExportAnalytics";
+
+const CHART_COLORS = [
+  "#EF4444", // Red
+  "#3B82F6", // Blue
+  "#F59E0B", // Yellow
+  "#10B981", // Green
+  "#EC4899", // Pink
+  "#8B5CF6", // Purple
+  "#06B6D4", // Cyan
+  "#F97316", // Orange
+  "#14B8A6", // Teal
+  "#A855F7", // Violet
+];
 
 const Analytics = () => {
   const navigate = useNavigate();
@@ -473,22 +487,41 @@ const Analytics = () => {
                     data={advancedData?.category_breakdown || []}
                     innerRadius={60}
                     outerRadius={80}
-                    paddingAngle={5}
+                    paddingAngle={2}
                     dataKey="value"
                     nameKey="name"
+                    minAngle={15}
                   >
                     {(advancedData?.category_breakdown || []).map(
                       (entry, index) => (
                         <Cell
                           key={`cell-${index}`}
-                          fill={`#${Math.floor(
-                            Math.random() * 16777215
-                          ).toString(16)}`}
+                          fill={CHART_COLORS[index % CHART_COLORS.length]}
                         />
                       )
                     )}
                   </Pie>
-                  <Tooltip formatter={(value) => formatCurrency(value)} />
+                  <Tooltip
+                    formatter={(value) => formatCurrency(value)}
+                    contentStyle={{
+                      backgroundColor: "#1F2937",
+                      border: "none",
+                    }}
+                    itemStyle={{ color: "#fff" }}
+                    labelStyle={{ color: "#9CA3AF" }}
+                  />
+                  <Legend
+                    layout="vertical"
+                    align="right"
+                    verticalAlign="middle"
+                    iconType="circle"
+                    iconSize={8}
+                    formatter={(value) => (
+                      <span style={{ color: "#9CA3AF", fontSize: "12px" }}>
+                        {value}
+                      </span>
+                    )}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
