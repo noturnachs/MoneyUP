@@ -28,7 +28,7 @@ exports.register = async (req, res) => {
 
     const finalFirstName = firstName || first_name;
     const finalLastName = lastName || last_name;
-    const finalPlan = plan?.toLowerCase() || "basic";
+    const finalPlan = plan?.toLowerCase() || "free";
 
     console.log("Registration data:", {
       email,
@@ -94,7 +94,7 @@ exports.register = async (req, res) => {
     // Create subscription
     const now = new Date();
     const endDate =
-      finalPlan === "basic"
+      finalPlan === "free"
         ? null // Basic plans don't expire
         : new Date(now.setMonth(now.getMonth() + 1)); // Pro plans last 1 month
 

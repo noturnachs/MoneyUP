@@ -4,7 +4,7 @@ import PayPalButton from "../components/payments/PaypalButton";
 
 const plans = [
   {
-    name: "Basic",
+    name: "Free",
     price: "Free",
     features: [
       "Basic Expense Tracking",
@@ -42,7 +42,7 @@ const Register = () => {
     email: "",
     password: "",
     confirmPassword: "",
-    plan: location.state?.plan || "basic",
+    plan: location.state?.plan || "free",
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
