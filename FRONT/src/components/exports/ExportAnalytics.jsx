@@ -19,7 +19,7 @@ const COLORS = {
   ],
 };
 
-const ExportAnalytics = () => {
+const ExportAnalytics = ({ user }) => {
   const [exporting, setExporting] = useState(false);
   const chartRef = useRef(null);
 
@@ -81,10 +81,17 @@ const ExportAnalytics = () => {
   const drawAllTransactionsTable = (pdf, startY, transactions, title) => {
     const pageWidth = pdf.internal.pageSize.getWidth();
     const margin = 20;
-    const colWidth = (pageWidth - margin * 2) / 4; // 4 columns
+
+    // Adjust column widths to better fit content
+    const colWidths = {
+      date: (pageWidth - margin * 2) * 0.15, // 15% for date
+      description: (pageWidth - margin * 2) * 0.45, // 45% for description
+      category: (pageWidth - margin * 2) * 0.2, // 20% for category
+      amount: (pageWidth - margin * 2) * 0.2, // 20% for amount
+    };
 
     // Title
-    pdf.setFont("helvetica", "bold");
+    pdf.setFont("times", "bold");
     pdf.setTextColor(...COLORS.purple);
     pdf.setFontSize(14);
     pdf.text(title, margin, startY);
@@ -98,38 +105,55 @@ const ExportAnalytics = () => {
     pdf.rect(margin, startY, pageWidth - margin * 2, 10, "F");
 
     // Header text
+    pdf.setFont("times", "bold");
     pdf.setTextColor(...COLORS.text);
     pdf.setFontSize(11);
 
+    let currentX = margin;
     headers.forEach((header, i) => {
-      pdf.text(header, margin + i * colWidth, startY + 7);
+      pdf.text(header, currentX, startY + 7);
+      currentX += Object.values(colWidths)[i];
     });
 
     // Table content
-    pdf.setFont("helvetica", "normal");
+    pdf.setFont("times", "normal");
     const rowHeight = 12;
 
     transactions.forEach((transaction, index) => {
       const y = startY + 15 + index * rowHeight;
+      currentX = margin;
 
       // Date
       pdf.text(
         new Date(transaction.created_at).toLocaleDateString("en-PH"),
-        margin,
+        currentX,
         y
       );
+      currentX += colWidths.date;
 
-      // Description
-      pdf.text(transaction.description || "-", margin + colWidth, y);
+      // Description - truncate if too long
+      const description = transaction.description || "-";
+      const truncatedDesc = pdf.splitTextToSize(
+        description,
+        colWidths.description - 5
+      )[0];
+      pdf.text(truncatedDesc, currentX, y);
+      currentX += colWidths.description;
 
       // Category
-      pdf.text(transaction.category_name || "-", margin + colWidth * 2, y);
+      const category = transaction.category_name || "-";
+      const truncatedCat = pdf.splitTextToSize(
+        category,
+        colWidths.category - 5
+      )[0];
+      pdf.text(truncatedCat, currentX, y);
+      currentX += colWidths.category;
 
       // Amount
       pdf.setTextColor(
         ...(title.includes("Income") ? COLORS.income : COLORS.expense)
       );
-      pdf.text(formatCurrency(transaction.amount), margin + colWidth * 3, y);
+      pdf.text(formatCurrency(transaction.amount), currentX, y);
       pdf.setTextColor(...COLORS.text);
     });
 
@@ -142,7 +166,7 @@ const ExportAnalytics = () => {
     const colWidth = (pageWidth - margin * 2) / 4; // 4 columns
 
     // Title
-    pdf.setFont("helvetica", "bold");
+    pdf.setFont("times", "bold");
     pdf.setTextColor(...COLORS.purple);
     pdf.setFontSize(14);
     pdf.text("Financial Goals", margin, startY);
@@ -151,7 +175,7 @@ const ExportAnalytics = () => {
 
     if (!goals || goals.length === 0) {
       // No goals message
-      pdf.setFont("helvetica", "normal");
+      pdf.setFont("times", "normal");
       pdf.setTextColor(...COLORS.text);
       pdf.setFontSize(11);
       pdf.text("You have no goals set...", margin, startY + 7);
@@ -166,6 +190,7 @@ const ExportAnalytics = () => {
     pdf.rect(margin, startY, pageWidth - margin * 2, 10, "F");
 
     // Header text
+    pdf.setFont("times", "bold");
     pdf.setTextColor(...COLORS.text);
     pdf.setFontSize(11);
 
@@ -174,7 +199,7 @@ const ExportAnalytics = () => {
     });
 
     // Table content
-    pdf.setFont("helvetica", "normal");
+    pdf.setFont("times", "normal");
     const rowHeight = 12;
 
     goals.forEach((goal, index) => {
@@ -221,6 +246,46 @@ const ExportAnalytics = () => {
         ...options,
         animation: false,
         responsive: false,
+        plugins: {
+          ...options.plugins,
+          title: {
+            ...options.plugins?.title,
+            font: {
+              ...options.plugins?.title?.font,
+              family: "'Times New Roman', Times, serif",
+            },
+          },
+          legend: {
+            ...options.plugins?.legend,
+            labels: {
+              ...options.plugins?.legend?.labels,
+              font: {
+                family: "'Times New Roman', Times, serif",
+              },
+            },
+          },
+        },
+        scales: {
+          ...options.scales,
+          y: {
+            ...options.scales?.y,
+            ticks: {
+              ...options.scales?.y?.ticks,
+              font: {
+                family: "'Times New Roman', Times, serif",
+              },
+            },
+          },
+          x: {
+            ...options.scales?.x,
+            ticks: {
+              ...options.scales?.x?.ticks,
+              font: {
+                family: "'Times New Roman', Times, serif",
+              },
+            },
+          },
+        },
       },
     });
 
@@ -228,30 +293,52 @@ const ExportAnalytics = () => {
   };
 
   const createIncomeVsExpensesChart = (income, expenses) => {
-    const totalIncome = income.reduce(
-      (sum, item) => sum + parseFloat(item.amount),
-      0
-    );
-    const totalExpenses = expenses.reduce(
-      (sum, item) => sum + parseFloat(item.amount),
-      0
-    );
+    // Group transactions by month
+    const monthlyData = {};
+
+    [...income, ...expenses].forEach((transaction) => {
+      const date = new Date(transaction.created_at);
+      const monthKey = `${date.toLocaleString("default", {
+        month: "short",
+      })} ${date.getFullYear()}`;
+
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = { income: 0, expenses: 0 };
+      }
+
+      if (income.includes(transaction)) {
+        monthlyData[monthKey].income += parseFloat(transaction.amount);
+      } else {
+        monthlyData[monthKey].expenses += parseFloat(transaction.amount);
+      }
+    });
+
+    // Convert to array and sort by date
+    const sortedData = Object.entries(monthlyData)
+      .map(([month, data]) => ({
+        month,
+        income: data.income,
+        expenses: data.expenses,
+      }))
+      .sort((a, b) => new Date(a.month) - new Date(b.month));
 
     return createChart(
-      "doughnut",
+      "bar",
       {
-        labels: ["Income", "Expenses"],
+        labels: sortedData.map((d) => d.month),
         datasets: [
           {
-            data: [totalIncome, totalExpenses],
-            backgroundColor: [
-              "rgba(16, 185, 129, 0.7)", // Green for Income
-              "rgba(239, 68, 68, 0.7)", // Red for Expenses
-            ],
-            borderColor: [
-              "rgb(16, 185, 129)", // Solid green border
-              "rgb(239, 68, 68)", // Solid red border
-            ],
+            label: "Income",
+            data: sortedData.map((d) => d.income),
+            backgroundColor: "rgba(16, 185, 129, 0.7)", // Green for Income
+            borderColor: "rgb(16, 185, 129)",
+            borderWidth: 1,
+          },
+          {
+            label: "Expenses",
+            data: sortedData.map((d) => d.expenses),
+            backgroundColor: "rgba(239, 68, 68, 0.7)", // Red for Expenses
+            borderColor: "rgb(239, 68, 68)",
             borderWidth: 1,
           },
         ],
@@ -265,32 +352,37 @@ const ExportAnalytics = () => {
           },
           legend: {
             position: "bottom",
-            labels: {
-              generateLabels: (chart) => {
-                const data = chart.data;
-                return data.labels.map((label, i) => ({
-                  text: `${label}: ${formatCurrency(data.datasets[0].data[i])}`,
-                  fillStyle: data.datasets[0].backgroundColor[i],
-                  strokeStyle: data.datasets[0].borderColor[i],
-                  lineWidth: 1,
-                  hidden: false,
-                  index: i,
-                }));
-              },
-            },
           },
           datalabels: {
-            color: "#fff",
-            font: { size: 14, weight: "bold" },
-            formatter: (value, ctx) => {
-              const sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
-              const percentage = ((value * 100) / sum).toFixed(1) + "%";
-              return `${formatCurrency(value)}\n(${percentage})`;
-            },
-            anchor: "center",
-            align: "center",
+            display: false, // Hide data labels to match the reference image
           },
         },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: "rgba(55, 65, 81, 0.3)", // Lighter grid lines
+              drawBorder: false,
+            },
+            ticks: {
+              callback: (value) => `₱${(value / 1000000000).toFixed(0)}B`,
+              color: "#9CA3AF",
+            },
+          },
+          x: {
+            grid: {
+              display: false, // No vertical grid lines
+            },
+            ticks: {
+              color: "#9CA3AF",
+              maxRotation: -45,
+              minRotation: -45,
+            },
+          },
+        },
+        barPercentage: 0.8,
+        categoryPercentage: 0.9,
+        maintainAspectRatio: false,
       }
     );
   };
@@ -369,7 +461,7 @@ const ExportAnalytics = () => {
         monthlyData[monthKey] = { income: 0, expenses: 0 };
       }
 
-      if (transaction.category_name) {
+      if (income.includes(transaction)) {
         monthlyData[monthKey].income += parseFloat(transaction.amount);
       } else {
         monthlyData[monthKey].expenses += parseFloat(transaction.amount);
@@ -394,6 +486,9 @@ const ExportAnalytics = () => {
             borderColor: `rgb(${COLORS.income})`,
             backgroundColor: `rgba(${COLORS.income}, 0.1)`,
             fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointBackgroundColor: `rgb(${COLORS.income})`,
           },
           {
             label: "Expenses",
@@ -401,6 +496,9 @@ const ExportAnalytics = () => {
             borderColor: `rgb(${COLORS.expense})`,
             backgroundColor: `rgba(${COLORS.expense}, 0.1)`,
             fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointBackgroundColor: `rgb(${COLORS.expense})`,
           },
         ],
       },
@@ -422,15 +520,62 @@ const ExportAnalytics = () => {
             align: "top",
             offset: 5,
           },
+          annotation: {
+            annotations: {
+              periodLabel: {
+                type: "label",
+                xValue: months.length - 2,
+                yValue:
+                  Math.max(
+                    ...months.map((month) =>
+                      Math.max(
+                        monthlyData[month].income,
+                        monthlyData[month].expenses
+                      )
+                    )
+                  ) * 0.9,
+                content: [
+                  `Period: ${months[months.length - 1]}`,
+                  `Income: ${formatCurrency(
+                    monthlyData[months[months.length - 1]].income
+                  )}`,
+                  `Expenses: ${formatCurrency(
+                    monthlyData[months[months.length - 1]].expenses
+                  )}`,
+                ],
+                backgroundColor: "transparent",
+                color: "#9CA3AF",
+                font: {
+                  size: 12,
+                },
+              },
+            },
+          },
         },
         scales: {
           y: {
             beginAtZero: true,
+            grid: {
+              color: "rgba(55, 65, 81, 0.3)",
+              drawBorder: false,
+            },
             ticks: {
-              callback: (value) => formatCurrency(value),
+              callback: (value) => `₱${(value / 1000000000).toFixed(0)}B`,
+              color: "#9CA3AF",
+            },
+          },
+          x: {
+            grid: {
+              display: false,
+            },
+            ticks: {
+              color: "#9CA3AF",
+              maxRotation: -45,
+              minRotation: -45,
             },
           },
         },
+        maintainAspectRatio: false,
       }
     );
   };
@@ -501,29 +646,37 @@ const ExportAnalytics = () => {
         format: "a4",
       });
 
-      // Set default font
-      pdf.setFont("helvetica");
+      // Set Times New Roman font
+      pdf.setFont("times", "normal");
 
       // Page dimensions
       const pageWidth = pdf.internal.pageSize.getWidth();
       const margin = 20;
 
-      // Header
+      // Header background
       pdf.setFillColor(103, 58, 183);
       pdf.rect(0, 0, pageWidth, 40, "F");
 
+      // Main title
       pdf.setTextColor(255, 255, 255);
+      pdf.setFont("times", "bold");
       pdf.setFontSize(24);
-      pdf.text("Recent Transactions", pageWidth / 2, 25, { align: "center" });
+      pdf.text("Account Updates", pageWidth / 2, 20, { align: "center" });
 
-      // Date
+      // Generated by and date
+      pdf.setFont("times", "normal");
       pdf.setFontSize(12);
       const currentDate = new Date().toLocaleDateString("en-PH", {
         year: "numeric",
         month: "long",
         day: "numeric",
       });
-      pdf.text(`Generated on: ${currentDate}`, pageWidth / 2, 35, {
+
+      const username = user?.username; // Get username from your auth context
+      pdf.text(`Generated by: ${username}`, pageWidth / 2, 30, {
+        align: "center",
+      });
+      pdf.text(`Generated on: ${currentDate}`, pageWidth / 2, 37, {
         align: "center",
       });
 
@@ -582,7 +735,7 @@ const ExportAnalytics = () => {
       nextY = 20;
 
       // Add Charts title
-      pdf.setFont("helvetica", "bold");
+      pdf.setFont("times", "bold");
       pdf.setTextColor(...COLORS.purple);
       pdf.setFontSize(14);
       pdf.text("Financial Analytics", margin, nextY);

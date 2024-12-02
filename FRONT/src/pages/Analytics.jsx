@@ -416,6 +416,7 @@ const Analytics = () => {
             <ExportAnalytics
               basicData={basicData}
               advancedData={advancedData}
+              user={user}
             />
           )}
         </div>
