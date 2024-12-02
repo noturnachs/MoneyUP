@@ -78,7 +78,7 @@ const Navbar = ({ onMenuClick, isCollapsed, setIsSidebarOpen }) => {
                     <li>
                       Send the screenshot to:{" "}
                       <span className="font-semibold text-white">
-                        support@example.com
+                        support@leeyos.com
                       </span>
                     </li>
                     <li>
