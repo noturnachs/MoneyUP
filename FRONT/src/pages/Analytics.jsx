@@ -17,6 +17,7 @@ import {
 } from "recharts";
 import { Dialog, Transition } from "@headlessui/react";
 import { Fragment } from "react";
+import ExportAnalytics from "../components/exports/ExportAnalytics";
 
 const Analytics = () => {
   const navigate = useNavigate();
@@ -395,6 +396,14 @@ const Analytics = () => {
             Spending Insights
           </h2>
           {renderSpendingInsights()}
+        </div>
+        <div className="flex justify-end mb-6">
+          {hasPro && (
+            <ExportAnalytics
+              basicData={basicData}
+              advancedData={advancedData}
+            />
+          )}
         </div>
         {/* Pro Features */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">

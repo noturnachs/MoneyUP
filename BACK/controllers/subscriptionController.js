@@ -3,25 +3,32 @@ const Subscription = require("../models/Subscription.js");
 const subscriptionController = {
   getSubscription: async (req, res) => {
     try {
-      const userId = req.user.user_id;
-      const subscription = await Subscription.getByUserId(userId);
+      const userId = req.user.id;
 
+      // First check if subscription exists
+      let subscription = await Subscription.getSubscriptionStatus(userId);
+
+      // If no subscription exists, create one with free tier
       if (!subscription) {
-        const newSubscription = await Subscription.create(userId);
-        return res.json(newSubscription);
+        subscription = await Subscription.create(userId, "free");
+
+        // Get the full status after creation
+        subscription = await Subscription.getSubscriptionStatus(userId);
       }
 
       res.json(subscription);
     } catch (error) {
-      res
-        .status(500)
-        .json({ message: "Error fetching subscription", error: error.message });
+      console.error("Subscription error:", error);
+      res.status(500).json({
+        message: "Error fetching subscription",
+        error: error.message,
+      });
     }
   },
 
   updateSubscription: async (req, res) => {
     try {
-      const userId = req.user.user_id;
+      const userId = req.user.id;
       const { tier } = req.body;
 
       if (!["free", "pro", "enterprise"].includes(tier)) {
@@ -31,9 +38,10 @@ const subscriptionController = {
       const updatedSubscription = await Subscription.updateTier(userId, tier);
       res.json(updatedSubscription);
     } catch (error) {
-      res
-        .status(500)
-        .json({ message: "Error updating subscription", error: error.message });
+      res.status(500).json({
+        message: "Error updating subscription",
+        error: error.message,
+      });
     }
   },
 

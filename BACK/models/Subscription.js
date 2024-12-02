@@ -10,6 +10,7 @@ class Subscription {
     this.is_active = data.is_active;
     this.created_at = data.created_at;
     this.updated_at = data.updated_at;
+    this.tier_status = data.tier_status;
   }
 
   // Get subscription by user ID
@@ -29,8 +30,8 @@ class Subscription {
   static async create(userId, tier = "free") {
     try {
       const result = await pool.query(
-        `INSERT INTO subscriptions (user_id, tier) 
-                 VALUES ($1, $2) 
+        `INSERT INTO subscriptions (user_id, tier, is_active) 
+                 VALUES ($1, $2, true) 
                  RETURNING *`,
         [userId, tier]
       );
@@ -43,15 +44,34 @@ class Subscription {
   // Update subscription tier
   static async updateTier(userId, newTier) {
     try {
-      const result = await pool.query(
+      // Begin transaction
+      await pool.query("BEGIN");
+
+      // Update subscription
+      const subResult = await pool.query(
         `UPDATE subscriptions 
                  SET tier = $1 
                  WHERE user_id = $2 
                  RETURNING *`,
         [newTier, userId]
       );
-      return result.rows[0] ? new Subscription(result.rows[0]) : null;
+
+      // Update user tier status
+      const userResult = await pool.query(
+        `UPDATE users 
+                 SET tier_status = $1 
+                 WHERE id = $2 
+                 RETURNING *`,
+        [newTier, userId]
+      );
+
+      // Commit transaction
+      await pool.query("COMMIT");
+
+      return subResult.rows[0] ? new Subscription(subResult.rows[0]) : null;
     } catch (error) {
+      // Rollback transaction
+      await pool.query("ROLLBACK");
       throw error;
     }
   }
@@ -85,6 +105,28 @@ class Subscription {
       // Check if user's tier has access to the feature
       const tierFeatures = featureAccess[subscription.tier] || [];
       return tierFeatures.includes(feature);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Get subscription status (including tier_status from users table)
+  static async getSubscriptionStatus(userId) {
+    try {
+      const result = await pool.query(
+        `SELECT * FROM subscriptions WHERE user_id = $1`,
+        [userId]
+      );
+
+      // If we find a subscription, return it with a default tier_status based on tier
+      if (result.rows[0]) {
+        const subscription = result.rows[0];
+        return new Subscription({
+          ...subscription,
+          tier_status: subscription.tier === "free" ? "free" : "active",
+        });
+      }
+      return null;
     } catch (error) {
       throw error;
     }

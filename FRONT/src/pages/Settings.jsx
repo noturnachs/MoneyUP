@@ -5,6 +5,7 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { ring } from "ldrs";
+import SubscriptionStatus from "../components/manageSubs/SubscriptionStatus";
 
 // Initialize the loader
 ring.register();
@@ -147,6 +148,12 @@ const Settings = () => {
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+      {/* Subscription Status Section */}
+      <div className="mb-6">
+        <SubscriptionStatus />
+      </div>
+
+      {/* Threshold Settings Section */}
       <div className="bg-gray-800 rounded-xl p-4 sm:p-8 border border-gray-700">
         <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">
           Threshold Settings
