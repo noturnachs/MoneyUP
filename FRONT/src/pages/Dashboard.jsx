@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { CheckCircleIcon } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { ring } from "ldrs";
 
 // Initialize the loader (needs to be done once)
@@ -77,7 +77,8 @@ const calculateFinancialProfile = (balanceData, recentTransactions) => {
 };
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
+  const location = useLocation();
   const [hasData, setHasData] = useState(false);
   const [step, setStep] = useState(1);
   const [initialBalance, setInitialBalance] = useState("");
@@ -105,6 +106,18 @@ const Dashboard = () => {
   const [sortOrder, setSortOrder] = useState("latest");
   const [filterType, setFilterType] = useState("all");
   const [financialProfile, setFinancialProfile] = useState(null);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+
+  useEffect(() => {
+    // Refresh user data when the component mounts
+    refreshUser();
+  }, []);
+
+  useEffect(() => {
+    if (location.state?.message) {
+      setShowSuccessMessage(true);
+    }
+  }, [location.state]);
 
   const handleThresholdSubmit = async (thresholdValue) => {
     try {
@@ -610,6 +623,60 @@ const Dashboard = () => {
         isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
       }`}
     >
+      {/* Success Message */}
+      {showSuccessMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className="bg-green-900/30 border border-green-500/30 rounded-xl p-4 flex items-center justify-between"
+        >
+          <div className="flex items-center space-x-3">
+            <svg
+              className="h-6 w-6 text-green-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <div>
+              <p className="font-medium text-green-400">
+                {location.state?.message}
+              </p>
+              <p className="text-sm text-green-300 mt-1">
+                Enjoy features like:
+                <ul className="list-disc list-inside mt-1 ml-2">
+                  <li>Unlimited History</li>
+                  <li>Advanced Analytics & Reports</li>
+                  <li>Custom Categories & Tags</li>
+                  <li>Budget Goals & Alerts</li>
+                  <li>Data Export (CSV/PDF)</li>
+                  <li>Priority Support</li>
+                </ul>
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowSuccessMessage(false)}
+            className="text-green-400 hover:text-green-300 self-start"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fillRule="evenodd"
+                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        </motion.div>
+      )}
+
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
         <div className="bg-gray-800 p-3 sm:p-6 rounded-xl border border-gray-700">

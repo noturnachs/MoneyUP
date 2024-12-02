@@ -19,6 +19,7 @@ import Profile from "./pages/Profile";
 import Income from "./pages/Income";
 import Settings from "./pages/Settings";
 import Goals from "./pages/Goals";
+import Upgrade from "./pages/Upgrade";
 import VerifyEmail from "./pages/VerifyEmail";
 import ResetPassword from "./pages/ResetPassword";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -174,6 +175,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/upgrade"
+                element={
+                  <ProtectedRoute>
+                    <Upgrade />
                   </ProtectedRoute>
                 }
               />

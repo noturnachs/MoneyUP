@@ -163,6 +163,107 @@ const verifyPayPalPayment = async (req, res) => {
   }
 };
 
+const verifyPayPalUpgrade = async (req, res) => {
+  const client = await db.getConnection();
+
+  try {
+    await client.query("BEGIN");
+
+    const { orderID, paymentDetails, userId } = req.body; // Ensure userId is destructured from req.body
+    console.log("Payment Details:", paymentDetails);
+
+    // Verify the payment details
+    if (
+      !paymentDetails ||
+      !paymentDetails.purchase_units ||
+      !paymentDetails.purchase_units[0]
+    ) {
+      throw new Error("Invalid payment details");
+    }
+
+    const paymentStatus = paymentDetails.status;
+    if (paymentStatus !== "COMPLETED") {
+      throw new Error(`Payment not completed. Status: ${paymentStatus}`);
+    }
+
+    const amount = paymentDetails.purchase_units[0].amount.value;
+
+    // Use userId from request body
+    if (!userId) {
+      throw new Error("No user ID available");
+    }
+
+    // Record payment
+    const {
+      rows: [payment],
+    } = await client.query(
+      `INSERT INTO payments (
+        user_id,
+        amount,
+        payment_method,
+        external_payment_id,
+        status,
+        metadata
+      ) VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING payment_id`,
+      [
+        userId,
+        amount,
+        "paypal",
+        orderID,
+        "completed",
+        JSON.stringify(paymentDetails),
+      ]
+    );
+
+    // Update subscription
+    const {
+      rows: [subscription],
+    } = await client.query(
+      `INSERT INTO subscriptions (
+        user_id,
+        tier,
+        start_date,
+        end_date,
+        is_active
+      ) VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '1 month', true)
+      ON CONFLICT (user_id) 
+      DO UPDATE SET 
+        tier = 'pro',
+        start_date = CURRENT_TIMESTAMP,
+        end_date = CURRENT_TIMESTAMP + INTERVAL '1 month',
+        is_active = true,
+        updated_at = CURRENT_TIMESTAMP
+      RETURNING id`,
+      [userId, "pro"]
+    );
+
+    await client.query("COMMIT");
+
+    return res.status(200).json({
+      success: true,
+      message: "Payment verified and subscription updated.",
+      data: {
+        userId,
+        paymentId: payment.payment_id,
+        subscriptionId: subscription.id,
+      },
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Payment verification error:", error);
+
+    return res.status(400).json({
+      success: false,
+      message: "Payment verification failed",
+      error: error.message,
+    });
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   verifyPayPalPayment,
+  verifyPayPalUpgrade, // Export the new function
 };

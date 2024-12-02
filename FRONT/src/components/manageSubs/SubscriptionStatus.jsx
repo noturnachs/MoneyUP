@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Dialog, Transition } from "@headlessui/react";
 import { Fragment } from "react";
 
 const SubscriptionStatus = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
@@ -193,7 +194,7 @@ const SubscriptionStatus = () => {
           {subscription?.tier_status === "free" && (
             <div className="mt-6">
               <button
-                onClick={() => setIsUpgradeModalOpen(true)}
+                onClick={() => navigate("/upgrade")}
                 className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
               >
                 Upgrade to Pro

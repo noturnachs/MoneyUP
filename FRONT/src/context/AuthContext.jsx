@@ -10,6 +10,33 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const refreshUser = async () => {
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/auth/profile`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setUser({
+          id: data.id,
+          email: data.email,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          username: data.username,
+          subscription: data.subscription,
+        });
+      }
+    } catch (error) {
+      console.error("Error refreshing user data:", error);
+    }
+  };
+
   const fetchUserData = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -110,6 +137,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     fetchUserData,
     isProUser,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

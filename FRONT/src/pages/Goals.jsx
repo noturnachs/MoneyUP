@@ -64,103 +64,18 @@ const Goals = () => {
     user?.subscription?.tier === "pro" ||
     user?.subscription?.tier === "enterprise";
 
-  const UpgradeModal = () => (
-    <Transition appear show={isUpgradeModalOpen} as={Fragment}>
-      <Dialog
-        as="div"
-        className="relative z-50"
-        onClose={() => setIsUpgradeModalOpen(false)}
-      >
-        <Transition.Child
-          as={Fragment}
-          enter="ease-out duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-200"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-black bg-opacity-25" />
-        </Transition.Child>
-
-        <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4 text-center">
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 scale-95"
-              enterTo="opacity-100 scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 scale-100"
-              leaveTo="opacity-0 scale-95"
-            >
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-gray-800 p-6 text-left align-middle shadow-xl transition-all">
-                <Dialog.Title
-                  as="h3"
-                  className="text-lg font-medium leading-6 text-white mb-4"
-                >
-                  Upgrade to Pro Plan
-                </Dialog.Title>
-                <div className="mt-2">
-                  <p className="text-gray-300 mb-4">
-                    To upgrade to our Pro plan, please follow these steps:
-                  </p>
-                  <ol className="list-decimal list-inside text-gray-300 space-y-2">
-                    <li>
-                      Send ₱299 via GCash to:{" "}
-                      <span className="font-semibold text-white">
-                        09062130621
-                      </span>
-                    </li>
-                    <li>Take a screenshot of your payment</li>
-                    <li>
-                      Send the screenshot to:{" "}
-                      <span className="font-semibold text-white">
-                        support@example.com
-                      </span>
-                    </li>
-                    <li>
-                      Include your email:{" "}
-                      <span className="font-semibold text-white">
-                        {user?.email}
-                      </span>
-                    </li>
-                  </ol>
-                  <p className="mt-4 text-sm text-gray-400">
-                    We'll upgrade your account within 24 hours after payment
-                    verification.
-                  </p>
-                </div>
-
-                <div className="mt-6">
-                  <button
-                    type="button"
-                    className="w-full px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2"
-                    onClick={() => setIsUpgradeModalOpen(false)}
-                  >
-                    Got it, thanks!
-                  </button>
-                </div>
-              </Dialog.Panel>
-            </Transition.Child>
-          </div>
-        </div>
-      </Dialog>
-    </Transition>
-  );
-
   const BlurredOverlay = () => (
     <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm flex flex-col items-center justify-center rounded-lg z-50">
       <div className="text-white text-lg font-semibold mb-4">Pro Feature</div>
       <p className="text-gray-300 text-center mb-4 max-w-sm px-4">
         Track your savings goals and monitor your progress with our Pro plan
       </p>
-      <button
-        onClick={() => setIsUpgradeModalOpen(true)}
+      <Link
+        to="/upgrade"
         className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
       >
         Upgrade Now
-      </button>
+      </Link>
     </div>
   );
 
@@ -862,8 +777,6 @@ const Goals = () => {
           border-color: #7c3aed !important;
         }
       `}</style>
-
-      <UpgradeModal />
     </div>
   );
 };
