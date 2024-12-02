@@ -32,6 +32,7 @@ exports.sendVerificationEmail = async (email, token) => {
             Verify Email
           </a>
         </div>
+        <p style="color: #666;">If the button doesn't work, click here: <a href="${verificationUrl}" style="color: #6B46C1;">${verificationUrl}</a></p>
         <p style="color: #666;">This link will expire in 24 hours.</p>
         <p style="color: #666;">If you didn't create an account with MoneyUp, please ignore this email.</p>
       </div>
@@ -94,6 +95,7 @@ exports.sendPasswordResetEmail = async (email, token) => {
             Reset Password
           </a>
         </div>
+        <p style="color: #666;">If the button doesn't work, click here: <a href="${resetUrl}" style="color: #6B46C1;">${resetUrl}</a></p>
         <p style="color: #666;">This link will expire in 1 hour.</p>
         <p style="color: #666;">If you didn't request a password reset, please ignore this email or contact support if you have concerns.</p>
       </div>
