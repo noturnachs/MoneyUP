@@ -20,6 +20,62 @@ const formatDate = (date) => {
 
 const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
+const calculateFinancialProfile = (balanceData, recentTransactions) => {
+  // Calculate savings rate
+  const totalIncome = balanceData.totalBalance || 0;
+  const totalExpenses = balanceData.monthlyExpenses || 0;
+  const savingsRate =
+    totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
+
+  // Calculate expense patterns
+  const expenseCategories = recentTransactions
+    .filter((t) => t.type === "expense")
+    .reduce((acc, t) => {
+      acc[t.category_name] = (acc[t.category_name] || 0) + parseFloat(t.amount);
+      return acc;
+    }, {});
+
+  // Determine financial profile
+  let profile = {
+    type: "",
+    description: "",
+    tips: [],
+  };
+
+  if (savingsRate >= 30) {
+    profile.type = "Super Saver";
+    profile.description = "You have excellent saving habits!";
+    profile.tips = [
+      "Consider investing your surplus",
+      "Keep maintaining your savings discipline",
+    ];
+  } else if (savingsRate >= 20) {
+    profile.type = "Smart Saver";
+    profile.description = "You have good saving habits";
+    profile.tips = [
+      "Try to increase savings by 5%",
+      "Look for additional income sources",
+    ];
+  } else if (savingsRate >= 10) {
+    profile.type = "Cautious Spender";
+    profile.description = "You save, but there's room for improvement";
+    profile.tips = [
+      "Track your discretionary spending",
+      "Set up automatic savings",
+    ];
+  } else {
+    profile.type = "Active Spender";
+    profile.description = "Consider building your savings";
+    profile.tips = ["Create a budget", "Find areas to reduce expenses"];
+  }
+
+  return {
+    profile,
+    savingsRate,
+    expenseCategories,
+  };
+};
+
 const Dashboard = () => {
   const { user } = useAuth();
   const [hasData, setHasData] = useState(false);
@@ -48,6 +104,7 @@ const Dashboard = () => {
   const [transactionsPerPage] = useState(5);
   const [sortOrder, setSortOrder] = useState("latest");
   const [filterType, setFilterType] = useState("all");
+  const [financialProfile, setFinancialProfile] = useState(null);
 
   const handleThresholdSubmit = async (thresholdValue) => {
     try {
@@ -292,6 +349,16 @@ const Dashboard = () => {
       setShowThresholdAlert(currentBalance <= warningThreshold);
     }
   }, [threshold, balanceData.currentBalance]);
+
+  useEffect(() => {
+    if (balanceData && recentTransactions.length > 0) {
+      const profile = calculateFinancialProfile(
+        balanceData,
+        recentTransactions
+      );
+      setFinancialProfile(profile);
+    }
+  }, [balanceData, recentTransactions]);
 
   const Pagination = ({
     totalItems,
@@ -894,6 +961,77 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Financial Profile Card */}
+      {financialProfile && (
+        <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
+          <h3 className="text-lg font-medium text-white mb-4">
+            Financial Profile
+          </h3>
+
+          <div className="space-y-4">
+            <div className="flex items-center space-x-3">
+              <div className="bg-purple-500/10 p-3 rounded-full">
+                <svg
+                  className="h-6 w-6 text-purple-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  />
+                </svg>
+              </div>
+              <div>
+                <h4 className="text-lg font-medium text-white">
+                  {financialProfile.profile.type}
+                </h4>
+                <p className="text-gray-400">
+                  {financialProfile.profile.description}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Savings Rate</span>
+                <span className="text-white">
+                  {Math.round(financialProfile.savingsRate)}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-700 rounded-full h-2">
+                <div
+                  className="bg-purple-500 rounded-full h-2 transition-all duration-500"
+                  style={{
+                    width: `${Math.min(financialProfile.savingsRate, 100)}%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h5 className="text-sm font-medium text-gray-400">
+                Recommendations
+              </h5>
+              <ul className="space-y-2">
+                {financialProfile.profile.tips.map((tip, index) => (
+                  <li
+                    key={index}
+                    className="flex items-center space-x-2 text-sm text-gray-300"
+                  >
+                    <span className="text-purple-400">•</span>
+                    <span>{tip}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Recent Updates Section */}
       <div className="bg-gray-800 rounded-xl border border-gray-700 mt-6">
