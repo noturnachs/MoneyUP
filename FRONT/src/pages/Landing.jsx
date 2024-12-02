@@ -26,6 +26,7 @@ import {
   ArcElement,
 } from "chart.js";
 import { Line, Bar, Doughnut } from "react-chartjs-2";
+import logo64 from "../components/images/logo64.png";
 
 // Register ChartJS components
 ChartJS.register(
@@ -267,10 +268,15 @@ const Landing = () => {
       <nav className="border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <span className="text-2xl font-bold text-white">
-                Money<span className="text-green-500">Up</span>
-              </span>
+            <div className="flex items-center space-x-2">
+              <div className="flex items-center">
+                <img src={logo64} alt="MoneyUp Logo" className="h-8 w-8" />
+                <div className="flex items-center h-8">
+                  <span className="text-2xl font-bold text-white">
+                    Money<span className="text-green-500">Up</span>
+                  </span>
+                </div>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
               {user ? (
