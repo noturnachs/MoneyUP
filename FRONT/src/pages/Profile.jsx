@@ -21,7 +21,6 @@ const Profile = () => {
   const [originalEmail, setOriginalEmail] = useState("");
 
   useEffect(() => {
-    console.log("Current user data:", user);
     if (user) {
       setFormData((prev) => ({
         ...prev,

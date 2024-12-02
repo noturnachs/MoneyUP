@@ -46,7 +46,6 @@ const Analytics = () => {
     user?.subscription?.tier === "enterprise";
 
   useEffect(() => {
-    console.log("Current user subscription:", user?.subscription);
     fetchAnalytics();
   }, [user]);
 
@@ -75,7 +74,6 @@ const Analytics = () => {
         );
         if (advancedResponse.ok) {
           const advancedResult = await advancedResponse.json();
-          console.log("Advanced data:", advancedResult.data);
           setAdvancedData(advancedResult.data);
         }
       }
