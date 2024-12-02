@@ -693,18 +693,18 @@ const Landing = () => {
               &copy; 2024 MoneyUp. All rights reserved.
             </p>
             <div className="flex space-x-6">
-              <a
-                href="/"
+              <Link
+                to="/privacy"
                 className="text-sm sm:text-base text-gray-400 hover:text-gray-300"
               >
                 Privacy
-              </a>
-              <a
-                href="/"
+              </Link>
+              <Link
+                to="/terms"
                 className="text-sm sm:text-base text-gray-400 hover:text-gray-300"
               >
                 Terms
-              </a>
+              </Link>
             </div>
           </div>
         </div>

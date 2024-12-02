@@ -21,6 +21,8 @@ import Goals from "./pages/Goals";
 import VerifyEmail from "./pages/VerifyEmail";
 import ResetPassword from "./pages/ResetPassword";
 import ForgotPassword from "./pages/ForgotPassword";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 
 // Import components
 import Navbar from "./components/layout/Navbar";
@@ -50,9 +52,13 @@ const AppLayout = ({ children }) => {
     "/verify-email",
     "/reset-password",
     "/forgot-password",
+    "/privacy",
+    "/terms",
   ];
   const isPublicRoute =
     publicRoutes.includes(location.pathname) ||
+    location.pathname.startsWith("/privacy") ||
+    location.pathname.startsWith("/terms") ||
     location.pathname.startsWith("/verify-email") ||
     location.pathname.startsWith("/reset-password") ||
     location.pathname.startsWith("/forgot-password");
@@ -222,6 +228,23 @@ function App() {
                 <h1 className="text-4xl font-bold text-gray-200">404</h1>
                 <p className="text-gray-400">Page not found</p>
               </div>
+            }
+          />
+
+          <Route
+            path="/privacy"
+            element={
+              <PublicRoute>
+                <Privacy />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/terms"
+            element={
+              <PublicRoute>
+                <Terms />
+              </PublicRoute>
             }
           />
         </Routes>
