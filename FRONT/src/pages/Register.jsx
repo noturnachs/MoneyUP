@@ -385,12 +385,15 @@ const Register = () => {
                   <button
                     key={plan.name}
                     type="button"
-                    onClick={() =>
+                    onClick={() => {
                       setFormData((prev) => ({
                         ...prev,
                         plan: plan.name.toLowerCase(),
-                      }))
-                    }
+                      }));
+                      if (plan.name.toLowerCase() === "free") {
+                        setShowPayPal(false);
+                      }
+                    }}
                     className={`p-8 rounded-lg text-left ${
                       formData.plan === plan.name.toLowerCase()
                         ? "bg-purple-900/50 border-2 border-purple-500"
@@ -470,19 +473,28 @@ const Register = () => {
           </div>
 
           {showPayPal && (
-            <div className="mt-4">
-              <PayPalButton
-                amount="299.00"
-                onSuccess={handlePayPalSuccess}
-                onCancel={() => setShowPayPal(false)}
-                registrationData={formData}
-              />
-              <button
-                onClick={() => setShowPayPal(false)}
-                className="mt-4 w-full text-gray-400 hover:text-white"
-              >
-                Cancel
-              </button>
+            <div className="mt-8 space-y-4 bg-gray-800/50 p-6 rounded-lg border border-gray-700">
+              <h3 className="text-xl font-semibold text-white text-center mb-6">
+                Complete Your Pro Registration
+              </h3>
+
+              <div className="space-y-4 max-w-md mx-auto">
+                <div className="bg-white p-4 rounded-lg">
+                  <PayPalButton
+                    amount="299.00"
+                    onSuccess={handlePayPalSuccess}
+                    onCancel={() => setShowPayPal(false)}
+                    registrationData={formData}
+                  />
+                </div>
+
+                <button
+                  onClick={() => setShowPayPal(false)}
+                  className="w-full py-2 px-4 text-sm font-medium text-red-100 hover:text-white bg-red-900 hover:bg-red-800 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-red-500"
+                >
+                  Cancel Payment
+                </button>
+              </div>
             </div>
           )}
         </form>
