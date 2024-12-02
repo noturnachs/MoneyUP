@@ -6,6 +6,7 @@ import {
 } from "react-router-dom";
 import { useState } from "react";
 import { ring } from "ldrs";
+import { HelmetProvider } from "react-helmet-async";
 
 // Import pages
 import Landing from "./pages/Landing";
@@ -27,6 +28,7 @@ import Terms from "./pages/Terms";
 // Import components
 import Navbar from "./components/layout/Navbar";
 import Sidebar from "./components/layout/Sidebar";
+import PageTitle from "./components/layout/PageTitle";
 
 // Import context
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -85,6 +87,7 @@ const AppLayout = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
+      <PageTitle />
       <Navbar
         onMenuClick={() => setIsCollapsed(!isCollapsed)}
         isCollapsed={isCollapsed}
@@ -116,140 +119,145 @@ const AppLayoutWithAuth = ({ children }) => {
 
 function App() {
   return (
-    <Router>
-      <AppLayoutWithAuth>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<Landing />} />
-          <Route
-            path="/login"
-            element={
-              <PublicRoute>
-                <Login />
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/register"
-            element={
-              <PublicRoute>
-                <Register />
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/verify-email"
-            element={
-              <PublicRoute>
-                <VerifyEmail />
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/reset-password"
-            element={
-              <PublicRoute>
-                <ResetPassword />
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/forgot-password"
-            element={
-              <PublicRoute>
-                <ForgotPassword />
-              </PublicRoute>
-            }
-          />
+    <HelmetProvider>
+      <Router>
+        <AuthProvider>
+          <PageTitle />
+          <AppLayoutWithAuth>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<Landing />} />
+              <Route
+                path="/login"
+                element={
+                  <PublicRoute>
+                    <Login />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/register"
+                element={
+                  <PublicRoute>
+                    <Register />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/verify-email"
+                element={
+                  <PublicRoute>
+                    <VerifyEmail />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/reset-password"
+                element={
+                  <PublicRoute>
+                    <ResetPassword />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/forgot-password"
+                element={
+                  <PublicRoute>
+                    <ForgotPassword />
+                  </PublicRoute>
+                }
+              />
 
-          {/* Protected Routes */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/goals"
-            element={
-              <ProtectedRoute>
-                <Goals />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/expenses"
-            element={
-              <ProtectedRoute>
-                <Expenses />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/analytics"
-            element={
-              <ProtectedRoute>
-                <Analytics />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/income"
-            element={
-              <ProtectedRoute>
-                <Income />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            }
-          />
+              {/* Protected Routes */}
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/goals"
+                element={
+                  <ProtectedRoute>
+                    <Goals />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/expenses"
+                element={
+                  <ProtectedRoute>
+                    <Expenses />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/analytics"
+                element={
+                  <ProtectedRoute>
+                    <Analytics />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/income"
+                element={
+                  <ProtectedRoute>
+                    <Income />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                }
+              />
 
-          {/* Catch-all route for 404 - Optional */}
-          <Route
-            path="*"
-            element={
-              <div className="text-center py-20">
-                <h1 className="text-4xl font-bold text-gray-200">404</h1>
-                <p className="text-gray-400">Page not found</p>
-              </div>
-            }
-          />
+              {/* Catch-all route for 404 - Optional */}
+              <Route
+                path="*"
+                element={
+                  <div className="text-center py-20">
+                    <h1 className="text-4xl font-bold text-gray-200">404</h1>
+                    <p className="text-gray-400">Page not found</p>
+                  </div>
+                }
+              />
 
-          <Route
-            path="/privacy"
-            element={
-              <PublicRoute>
-                <Privacy />
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/terms"
-            element={
-              <PublicRoute>
-                <Terms />
-              </PublicRoute>
-            }
-          />
-        </Routes>
-      </AppLayoutWithAuth>
-    </Router>
+              <Route
+                path="/privacy"
+                element={
+                  <PublicRoute>
+                    <Privacy />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/terms"
+                element={
+                  <PublicRoute>
+                    <Terms />
+                  </PublicRoute>
+                }
+              />
+            </Routes>
+          </AppLayoutWithAuth>
+        </AuthProvider>
+      </Router>
+    </HelmetProvider>
   );
 }
 
