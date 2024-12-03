@@ -366,14 +366,19 @@ const Dashboard = () => {
   }, []); // Empty dependency array since we only want this to run once on mount
 
   useEffect(() => {
-    if (threshold && balanceData.currentBalance) {
+    if (threshold && balanceData?.currentBalance) {
       const thresholdValue = parseFloat(threshold);
-      const currentBalance = parseFloat(balanceData.currentBalance);
-      const warningThreshold = thresholdValue * 1.1;
+      const currentBalance = balanceData.currentBalance;
+      const warningThreshold = thresholdValue * 1.2; // 20% above threshold
 
-      setShowThresholdAlert(currentBalance <= warningThreshold);
+      // Show alert if balance is below threshold or within 20% of threshold
+      setShowThresholdAlert(
+        currentBalance <= warningThreshold && currentBalance > 0
+      );
+    } else {
+      setShowThresholdAlert(false);
     }
-  }, [threshold, balanceData.currentBalance]);
+  }, [threshold, balanceData?.currentBalance]);
 
   useEffect(() => {
     if (balanceData && recentTransactions.length > 0) {
@@ -847,7 +852,7 @@ const Dashboard = () => {
               >
                 {balanceData.currentBalance <= parseFloat(threshold)
                   ? "Low Balance Warning"
-                  : "Low Balance Alert"}
+                  : "Balance Alert"}
               </p>
               <p
                 className={`text-sm ${
@@ -868,7 +873,7 @@ const Dashboard = () => {
                     ).toLocaleString("en-US", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
-                    })}`}
+                    })} (within 20%)`}
               </p>
             </div>
           </div>

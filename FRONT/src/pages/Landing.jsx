@@ -321,7 +321,7 @@ const Landing = () => {
         initial="hidden"
         animate={heroControls}
         variants={containerVariants}
-        className="relative min-h-[80vh] flex items-start bg-gray-900 pt-24 px-4 sm:px-6 lg:px-8"
+        className="relative min-h-[80vh] flex items-start bg-gray-900 pt-24 px-4 sm:px-6 lg:px-8 overflow-hidden"
       >
         <div className="max-w-7xl mx-auto w-full mt-8">
           <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-8">
@@ -366,9 +366,9 @@ const Landing = () => {
             {/* Images */}
             <motion.div
               variants={itemVariants}
-              className="relative lg:col-span-6"
+              className="relative lg:col-span-6 px-4 sm:px-6 md:px-8 lg:px-0"
             >
-              <div className="relative mx-auto w-full">
+              <div className="relative mx-auto w-full max-w-[600px] lg:max-w-none">
                 {/* First Image */}
                 <motion.div
                   className="relative block w-full rounded-lg overflow-hidden transform transition-all duration-300 hover:scale-105"
@@ -378,10 +378,7 @@ const Landing = () => {
                   whileHover={{
                     scale: 1.05,
                     rotate: 1,
-                    transition: {
-                      duration: 0.4,
-                      ease: "easeOut",
-                    },
+                    transition: { duration: 0.4, ease: "easeOut" },
                   }}
                 >
                   <div className="absolute inset-0 bg-purple-500/10 opacity-0 hover:opacity-100 transition-opacity duration-300 rounded-lg" />
@@ -399,17 +396,14 @@ const Landing = () => {
 
                 {/* Second Image */}
                 <motion.div
-                  className="absolute -bottom-12 -right-12 w-4/5 rounded-lg overflow-hidden hidden sm:block"
+                  className="absolute -bottom-12 right-0 sm:-right-8 lg:-right-12 w-4/5 rounded-lg overflow-hidden hidden sm:block"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.5, duration: 0.5 }}
                   whileHover={{
                     scale: 1.05,
                     rotate: -1,
-                    transition: {
-                      duration: 0.4,
-                      ease: "easeOut",
-                    },
+                    transition: { duration: 0.4, ease: "easeOut" },
                   }}
                 >
                   <div className="absolute inset-0 bg-purple-500/10 opacity-0 hover:opacity-100 transition-opacity duration-300 rounded-lg" />

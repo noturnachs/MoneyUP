@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { ring } from "ldrs";
+
+import ExportAnalytics from "../components/exports/ExportAnalytics";
+
 import {
   BarChart,
   Bar,
@@ -16,9 +20,9 @@ import {
   Cell,
   Legend,
 } from "recharts";
-import { Dialog, Transition } from "@headlessui/react";
-import { Fragment } from "react";
-import ExportAnalytics from "../components/exports/ExportAnalytics";
+
+// Initialize the loader
+ring.register();
 
 const CHART_COLORS = [
   "#9333EA", // Entertainment
@@ -301,7 +305,20 @@ const Analytics = () => {
     );
   };
 
-  if (loading) return <div className="text-white">Loading analytics...</div>;
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <l-ring
+          size="40"
+          stroke="5"
+          bg-opacity="0"
+          speed="2"
+          color="rgb(147, 51, 234)"
+        />
+        <span className="mt-4 text-gray-400">Loading analytics...</span>
+      </div>
+    );
+  }
   if (error) return <div className="text-red-500">Error: {error}</div>;
 
   return (
