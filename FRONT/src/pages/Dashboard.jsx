@@ -21,6 +21,18 @@ const formatDate = (date) => {
 const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 const calculateFinancialProfile = (balanceData, recentTransactions) => {
+  // Check if there's enough data (at least 5 transactions each)
+  const incomeTransactions = recentTransactions.filter(
+    (t) => t.type === "income"
+  );
+  const expenseTransactions = recentTransactions.filter(
+    (t) => t.type === "expense"
+  );
+
+  if (incomeTransactions.length < 5 || expenseTransactions.length < 5) {
+    return null;
+  }
+
   // Calculate savings rate
   const totalIncome = balanceData.totalBalance || 0;
   const totalExpenses = balanceData.monthlyExpenses || 0;
@@ -1030,12 +1042,12 @@ const Dashboard = () => {
       </div>
 
       {/* Financial Profile Card */}
-      {financialProfile && (
-        <div className="bg-gray-800 p-6 rounded-xl border border-gray-700">
-          <h3 className="text-lg font-medium text-white mb-4">
-            Financial Profile
-          </h3>
+      <div className="bg-gray-800 rounded-xl border border-gray-700 p-3 sm:p-6">
+        <h3 className="text-lg font-medium text-white mb-4">
+          Financial Profile
+        </h3>
 
+        {financialProfile ? (
           <div className="space-y-4">
             <div className="flex items-center space-x-3">
               <div className="bg-purple-500/10 p-3 rounded-full">
@@ -1097,8 +1109,33 @@ const Dashboard = () => {
               </ul>
             </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="text-center py-6 space-y-3">
+            <div className="bg-purple-500/10 p-4 rounded-full inline-flex">
+              <svg
+                className="h-8 w-8 text-purple-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                />
+              </svg>
+            </div>
+            <div className="space-y-2">
+              <p className="text-gray-300">Not Enough Transaction Data</p>
+              <p className="text-sm text-gray-400">
+                Add at least 5 income and 5 expense transactions to generate
+                your financial profile.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Recent Updates Section */}
       <div className="bg-gray-800 rounded-xl border border-gray-700 mt-6">
