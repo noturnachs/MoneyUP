@@ -292,346 +292,502 @@ const ExportAnalytics = ({ user }) => {
     return canvas.toDataURL("image/png");
   };
 
-  const createIncomeVsExpensesChart = (income, expenses) => {
-    // Group transactions by month
-    const monthlyData = {};
+  const createIncomeVsExpensesChart = async (income, expenses) => {
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = 800;
+      canvas.height = 400;
+      const ctx = canvas.getContext("2d");
 
-    [...income, ...expenses].forEach((transaction) => {
-      const date = new Date(transaction.created_at);
-      const monthKey = `${date.toLocaleString("default", {
-        month: "short",
-      })} ${date.getFullYear()}`;
-
-      if (!monthlyData[monthKey]) {
-        monthlyData[monthKey] = { income: 0, expenses: 0 };
+      // Destroy existing chart if it exists
+      if (chartRef.current) {
+        chartRef.current.destroy();
       }
 
-      if (income.includes(transaction)) {
-        monthlyData[monthKey].income += parseFloat(transaction.amount);
-      } else {
-        monthlyData[monthKey].expenses += parseFloat(transaction.amount);
-      }
-    });
+      // Calculate totals
+      const totalIncome = income.reduce(
+        (sum, item) => sum + parseFloat(item.amount || 0),
+        0
+      );
+      const totalExpenses = expenses.reduce(
+        (sum, item) => sum + parseFloat(item.amount || 0),
+        0
+      );
 
-    // Convert to array and sort by date
-    const sortedData = Object.entries(monthlyData)
-      .map(([month, data]) => ({
-        month,
-        income: data.income,
-        expenses: data.expenses,
-      }))
-      .sort((a, b) => new Date(a.month) - new Date(b.month));
-
-    return createChart(
-      "bar",
-      {
-        labels: sortedData.map((d) => d.month),
-        datasets: [
-          {
-            label: "Income",
-            data: sortedData.map((d) => d.income),
-            backgroundColor: "rgba(16, 185, 129, 0.7)", // Green for Income
-            borderColor: "rgb(16, 185, 129)",
-            borderWidth: 1,
-          },
-          {
-            label: "Expenses",
-            data: sortedData.map((d) => d.expenses),
-            backgroundColor: "rgba(239, 68, 68, 0.7)", // Red for Expenses
-            borderColor: "rgb(239, 68, 68)",
-            borderWidth: 1,
-          },
-        ],
-      },
-      {
-        plugins: {
-          title: {
-            display: true,
-            text: "Income vs Expenses",
-            font: { size: 16 },
-          },
-          legend: {
-            position: "bottom",
-          },
-          datalabels: {
-            display: false, // Hide data labels to match the reference image
-          },
+      // Create new chart
+      const chart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: ["Income", "Expenses"],
+          datasets: [
+            {
+              data: [totalIncome, totalExpenses],
+              backgroundColor: [
+                "rgba(16, 185, 129, 0.7)",
+                "rgba(239, 68, 68, 0.7)",
+              ],
+              borderColor: ["rgb(16, 185, 129)", "rgb(239, 68, 68)"],
+              borderWidth: 1,
+              barThickness: 100,
+            },
+          ],
         },
-        scales: {
-          y: {
-            beginAtZero: true,
-            grid: {
-              color: "rgba(55, 65, 81, 0.3)", // Lighter grid lines
-              drawBorder: false,
+        options: {
+          responsive: false,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: "Income vs Expenses",
+              font: {
+                size: 20,
+                weight: "bold",
+                family: "'Times New Roman', Times, serif",
+              },
+              padding: 20,
             },
-            ticks: {
-              callback: (value) => `₱${(value / 1000000000).toFixed(0)}B`,
-              color: "#9CA3AF",
-            },
-          },
-          x: {
-            grid: {
-              display: false, // No vertical grid lines
-            },
-            ticks: {
-              color: "#9CA3AF",
-              maxRotation: -45,
-              minRotation: -45,
+            legend: {
+              display: false,
             },
           },
-        },
-        barPercentage: 0.8,
-        categoryPercentage: 0.9,
-        maintainAspectRatio: false,
-      }
-    );
-  };
-
-  const createExpensesByCategoryChart = (expenses) => {
-    const categoryTotals = expenses.reduce((acc, expense) => {
-      const category = expense.category_name || "Uncategorized";
-      acc[category] = (acc[category] || 0) + parseFloat(expense.amount);
-      return acc;
-    }, {});
-
-    return createChart(
-      "pie",
-      {
-        labels: Object.keys(categoryTotals),
-        datasets: [
-          {
-            data: Object.values(categoryTotals),
-            backgroundColor: COLORS.chartColors,
-            borderColor: COLORS.chartColors.map((color) =>
-              color.replace("0.7", "1")
-            ),
-            borderWidth: 1,
-          },
-        ],
-      },
-      {
-        plugins: {
-          title: {
-            display: true,
-            text: "Expenses by Category",
-            font: { size: 16 },
-          },
-          legend: {
-            position: "bottom",
-            labels: {
-              generateLabels: (chart) => {
-                const data = chart.data;
-                return data.labels.map((label, i) => ({
-                  text: `${label}: ${formatCurrency(data.datasets[0].data[i])}`,
-                  fillStyle: data.datasets[0].backgroundColor[i],
-                  strokeStyle: data.datasets[0].borderColor[i],
-                  lineWidth: 1,
-                  hidden: false,
-                  index: i,
-                }));
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: "rgba(156, 163, 175, 0.1)",
+              },
+              ticks: {
+                font: {
+                  size: 14,
+                  family: "'Times New Roman', Times, serif",
+                },
+                callback: function (value) {
+                  return "₱" + value.toLocaleString();
+                },
               },
             },
-          },
-          datalabels: {
-            color: "#fff",
-            font: { size: 12, weight: "bold" },
-            formatter: (value, ctx) => {
-              const sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
-              const percentage = ((value * 100) / sum).toFixed(1) + "%";
-              return percentage;
-            },
-            anchor: "center",
-            align: "center",
-          },
-        },
-      }
-    );
-  };
-
-  const createTrendChart = (income, expenses) => {
-    const monthlyData = {};
-
-    [...income, ...expenses].forEach((transaction) => {
-      const date = new Date(transaction.created_at);
-      const monthKey = `${date.getFullYear()}-${String(
-        date.getMonth() + 1
-      ).padStart(2, "0")}`;
-
-      if (!monthlyData[monthKey]) {
-        monthlyData[monthKey] = { income: 0, expenses: 0 };
-      }
-
-      if (income.includes(transaction)) {
-        monthlyData[monthKey].income += parseFloat(transaction.amount);
-      } else {
-        monthlyData[monthKey].expenses += parseFloat(transaction.amount);
-      }
-    });
-
-    const months = Object.keys(monthlyData).sort();
-
-    return createChart(
-      "line",
-      {
-        labels: months.map((month) => {
-          const [year, monthNum] = month.split("-");
-          return `${new Date(year, monthNum - 1).toLocaleString("default", {
-            month: "short",
-          })} ${year}`;
-        }),
-        datasets: [
-          {
-            label: "Income",
-            data: months.map((month) => monthlyData[month].income),
-            borderColor: `rgb(${COLORS.income})`,
-            backgroundColor: `rgba(${COLORS.income}, 0.1)`,
-            fill: true,
-            tension: 0.4,
-            pointRadius: 4,
-            pointBackgroundColor: `rgb(${COLORS.income})`,
-          },
-          {
-            label: "Expenses",
-            data: months.map((month) => monthlyData[month].expenses),
-            borderColor: `rgb(${COLORS.expense})`,
-            backgroundColor: `rgba(${COLORS.expense}, 0.1)`,
-            fill: true,
-            tension: 0.4,
-            pointRadius: 4,
-            pointBackgroundColor: `rgb(${COLORS.expense})`,
-          },
-        ],
-      },
-      {
-        plugins: {
-          title: {
-            display: true,
-            text: "Income & Expenses Trend",
-            font: { size: 16 },
-          },
-          legend: {
-            position: "bottom",
-          },
-          datalabels: {
-            color: "#000",
-            font: { size: 11 },
-            formatter: (value) => formatCurrency(value),
-            anchor: "end",
-            align: "top",
-            offset: 5,
-          },
-          annotation: {
-            annotations: {
-              periodLabel: {
-                type: "label",
-                xValue: months.length - 2,
-                yValue:
-                  Math.max(
-                    ...months.map((month) =>
-                      Math.max(
-                        monthlyData[month].income,
-                        monthlyData[month].expenses
-                      )
-                    )
-                  ) * 0.9,
-                content: [
-                  `Period: ${months[months.length - 1]}`,
-                  `Income: ${formatCurrency(
-                    monthlyData[months[months.length - 1]].income
-                  )}`,
-                  `Expenses: ${formatCurrency(
-                    monthlyData[months[months.length - 1]].expenses
-                  )}`,
-                ],
-                backgroundColor: "transparent",
-                color: "#9CA3AF",
+            x: {
+              grid: {
+                display: false,
+              },
+              ticks: {
                 font: {
-                  size: 12,
+                  size: 14,
+                  family: "'Times New Roman', Times, serif",
                 },
               },
             },
           },
         },
-        scales: {
-          y: {
-            beginAtZero: true,
-            grid: {
-              color: "rgba(55, 65, 81, 0.3)",
-              drawBorder: false,
+      });
+
+      // Wait for chart to render and get image data
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          const imageData = canvas.toDataURL("image/png");
+          chart.destroy(); // Clean up the chart
+          resolve(imageData);
+        }, 200);
+      });
+    } catch (error) {
+      console.error("Error creating chart:", error);
+      throw error;
+    }
+  };
+
+  const createExpensesByCategoryChart = async (expenses) => {
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = 800;
+      canvas.height = 400;
+      const ctx = canvas.getContext("2d");
+
+      // Destroy existing chart if it exists
+      if (chartRef.current) {
+        chartRef.current.destroy();
+      }
+
+      // Calculate category totals
+      const categoryTotals = expenses.reduce((acc, expense) => {
+        const category = expense.category_name || "Uncategorized";
+        acc[category] = (acc[category] || 0) + parseFloat(expense.amount || 0);
+        return acc;
+      }, {});
+
+      // Create new chart
+      const chart = new Chart(ctx, {
+        type: "pie",
+        data: {
+          labels: Object.keys(categoryTotals),
+          datasets: [
+            {
+              data: Object.values(categoryTotals),
+              backgroundColor: COLORS.chartColors,
+              borderColor: COLORS.chartColors.map((color) =>
+                color.replace("0.7", "1")
+              ),
+              borderWidth: 1,
             },
-            ticks: {
-              callback: (value) => `₱${(value / 1000000000).toFixed(0)}B`,
-              color: "#9CA3AF",
+          ],
+        },
+        options: {
+          responsive: false,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: "Expenses by Category",
+              font: {
+                size: 20,
+                weight: "bold",
+                family: "'Times New Roman', Times, serif",
+              },
+              padding: 20,
             },
-          },
-          x: {
-            grid: {
-              display: false,
+            legend: {
+              position: "bottom",
+              labels: {
+                font: {
+                  size: 12,
+                  family: "'Times New Roman', Times, serif",
+                },
+                generateLabels: (chart) => {
+                  const data = chart.data;
+                  return data.labels.map((label, i) => ({
+                    text: `${label}: ${formatCurrency(
+                      data.datasets[0].data[i]
+                    )}`,
+                    fillStyle: data.datasets[0].backgroundColor[i],
+                    strokeStyle: data.datasets[0].borderColor[i],
+                    lineWidth: 1,
+                    hidden: false,
+                    index: i,
+                  }));
+                },
+              },
             },
-            ticks: {
-              color: "#9CA3AF",
-              maxRotation: -45,
-              minRotation: -45,
+            tooltip: {
+              callbacks: {
+                label: (context) => {
+                  const value = context.raw;
+                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                  const percentage = ((value * 100) / total).toFixed(1);
+                  return `${context.label}: ${formatCurrency(
+                    value
+                  )} (${percentage}%)`;
+                },
+              },
             },
           },
         },
-        maintainAspectRatio: false,
-      }
-    );
+      });
+
+      // Wait for chart to render and get image data
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          const imageData = canvas.toDataURL("image/png");
+          chart.destroy(); // Clean up the chart
+          resolve(imageData);
+        }, 200);
+      });
+    } catch (error) {
+      console.error("Error creating category chart:", error);
+      throw error;
+    }
   };
 
-  const drawCharts = (pdf, startY, data) => {
+  const createTrendChart = async (income, expenses) => {
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = 800;
+      canvas.height = 400;
+      const ctx = canvas.getContext("2d");
+
+      if (chartRef.current) {
+        chartRef.current.destroy();
+      }
+
+      // Process data by month
+      const monthlyData = {};
+      [...income, ...expenses].forEach((transaction) => {
+        const date = new Date(transaction.created_at);
+        const monthKey = `${date.getFullYear()}-${String(
+          date.getMonth() + 1
+        ).padStart(2, "0")}`;
+
+        if (!monthlyData[monthKey]) {
+          monthlyData[monthKey] = { income: 0, expenses: 0 };
+        }
+
+        if (income.includes(transaction)) {
+          monthlyData[monthKey].income += parseFloat(transaction.amount || 0);
+        } else {
+          monthlyData[monthKey].expenses += parseFloat(transaction.amount || 0);
+        }
+      });
+
+      const months = Object.keys(monthlyData).sort();
+
+      // Calculate month-over-month changes
+      const currentMonth = months[months.length - 1];
+      const previousMonth = months[months.length - 2];
+
+      const comparison = {
+        income: {
+          current: monthlyData[currentMonth]?.income || 0,
+          previous: monthlyData[previousMonth]?.income || 0,
+          change: 0,
+          percentage: 0,
+        },
+        expenses: {
+          current: monthlyData[currentMonth]?.expenses || 0,
+          previous: monthlyData[previousMonth]?.expenses || 0,
+          change: 0,
+          percentage: 0,
+        },
+      };
+
+      // Calculate changes and percentages
+      comparison.income.change =
+        comparison.income.current - comparison.income.previous;
+      comparison.income.percentage = comparison.income.previous
+        ? (
+            (comparison.income.change / comparison.income.previous) *
+            100
+          ).toFixed(1)
+        : 0;
+
+      comparison.expenses.change =
+        comparison.expenses.current - comparison.expenses.previous;
+      comparison.expenses.percentage = comparison.expenses.previous
+        ? (
+            (comparison.expenses.change / comparison.expenses.previous) *
+            100
+          ).toFixed(1)
+        : 0;
+
+      // Create new chart
+      const chart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: months.map((month) => {
+            const [year, monthNum] = month.split("-");
+            return `${new Date(year, monthNum - 1).toLocaleString("default", {
+              month: "short",
+            })} ${year}`;
+          }),
+          datasets: [
+            {
+              label: "Income",
+              data: months.map((month) => monthlyData[month].income),
+              borderColor: `rgb(${COLORS.income})`,
+              backgroundColor: `rgba(${COLORS.income}, 0.1)`,
+              fill: true,
+              tension: 0.4,
+              pointRadius: 4,
+              pointBackgroundColor: `rgb(${COLORS.income})`,
+            },
+            {
+              label: "Expenses",
+              data: months.map((month) => monthlyData[month].expenses),
+              borderColor: `rgb(${COLORS.expense})`,
+              backgroundColor: `rgba(${COLORS.expense}, 0.1)`,
+              fill: true,
+              tension: 0.4,
+              pointRadius: 4,
+              pointBackgroundColor: `rgb(${COLORS.expense})`,
+            },
+          ],
+        },
+        options: {
+          responsive: false,
+          maintainAspectRatio: false,
+          layout: {
+            padding: {
+              left: 10,
+              right: 10,
+              top: 20,
+              bottom: 80, // Increased for comparison text
+            },
+          },
+          plugins: {
+            title: {
+              display: true,
+              text: [
+                "Income & Expenses Trend",
+                " ", // Empty line for spacing
+                `Month-over-Month Comparison:`,
+                `Income: ${
+                  comparison.income.change >= 0 ? "+" : ""
+                }₱${comparison.income.change.toLocaleString()} (${
+                  comparison.income.percentage
+                }% from previous month)`,
+                `Expenses: ${
+                  comparison.expenses.change >= 0 ? "+" : ""
+                }₱${comparison.expenses.change.toLocaleString()} (${
+                  comparison.expenses.percentage
+                }% from previous month)`,
+              ],
+              font: {
+                size: 14,
+                weight: "bold",
+                family: "'Times New Roman', Times, serif",
+              },
+              padding: 20,
+            },
+            legend: {
+              position: "bottom",
+              labels: {
+                font: {
+                  size: 12,
+                  family: "'Times New Roman', Times, serif",
+                },
+                padding: 20,
+              },
+            },
+            datalabels: {
+              display: true,
+              color: "#666",
+              align: "top",
+              offset: 10,
+              font: {
+                size: 11,
+                family: "'Times New Roman', Times, serif",
+              },
+              formatter: (value) => `₱${value.toLocaleString()}`,
+            },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: "rgba(156, 163, 175, 0.1)",
+              },
+              ticks: {
+                font: {
+                  size: 12,
+                  family: "'Times New Roman', Times, serif",
+                },
+                callback: function (value) {
+                  return "₱" + value.toLocaleString();
+                },
+              },
+            },
+            x: {
+              grid: {
+                display: false,
+              },
+              ticks: {
+                font: {
+                  size: 12,
+                  family: "'Times New Roman', Times, serif",
+                },
+                maxRotation: 45,
+                minRotation: 45,
+                display: true,
+                autoSkip: false,
+                padding: 10,
+              },
+            },
+          },
+        },
+      });
+
+      // Wait for chart to render and get image data
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          const imageData = canvas.toDataURL("image/png");
+          chart.destroy();
+          resolve(imageData);
+        }, 200);
+      });
+    } catch (error) {
+      console.error("Error creating trend chart:", error);
+      throw error;
+    }
+  };
+
+  const drawCharts = async (pdf, startY, data) => {
     const pageWidth = pdf.internal.pageSize.getWidth();
     const margin = 20;
     const chartWidth = pageWidth - margin * 2;
-    const chartHeight = 100;
+    const chartHeight = 120;
 
-    // Income vs Expenses Chart
-    const incomeVsExpensesChart = createIncomeVsExpensesChart(
-      data.allIncome,
-      data.allExpenses
-    );
-    pdf.addImage(
-      incomeVsExpensesChart,
-      "PNG",
-      margin,
-      startY,
-      chartWidth,
-      chartHeight
-    );
-    startY += chartHeight + 20;
+    try {
+      // Income vs Expenses Chart
+      const incomeVsExpensesChart = await createIncomeVsExpensesChart(
+        data.allIncome,
+        data.allExpenses
+      );
 
-    // Check if need new page
-    if (startY > pdf.internal.pageSize.getHeight() - 120) {
-      pdf.addPage();
-      startY = 20;
+      pdf.setFont("times", "bold");
+      pdf.setTextColor(...COLORS.text);
+      pdf.setFontSize(12);
+
+      if (incomeVsExpensesChart) {
+        pdf.addImage(
+          incomeVsExpensesChart,
+          "PNG",
+          margin,
+          startY,
+          chartWidth,
+          chartHeight
+        );
+        startY += chartHeight + 30;
+      }
+
+      // Check if need new page
+      if (startY > pdf.internal.pageSize.getHeight() - 140) {
+        pdf.addPage();
+        startY = 20;
+      }
+
+      // Expenses by Category Chart
+      const expensesByCategoryChart = await createExpensesByCategoryChart(
+        data.allExpenses
+      );
+
+      if (expensesByCategoryChart) {
+        pdf.addImage(
+          expensesByCategoryChart,
+          "PNG",
+          margin,
+          startY,
+          chartWidth,
+          chartHeight
+        );
+        startY += chartHeight + 30;
+      }
+
+      // Check if need new page
+      if (startY > pdf.internal.pageSize.getHeight() - 140) {
+        pdf.addPage();
+        startY = 20;
+      }
+
+      // Trend Chart
+      const trendChart = await createTrendChart(
+        data.allIncome,
+        data.allExpenses
+      );
+
+      if (trendChart) {
+        pdf.addImage(
+          trendChart,
+          "PNG",
+          margin,
+          startY,
+          chartWidth,
+          chartHeight
+        );
+        startY += chartHeight + 30;
+      }
+
+      return startY;
+    } catch (error) {
+      console.error("Error drawing charts:", error);
+      return startY;
     }
-
-    // Expenses by Category Chart
-    const expensesByCategoryChart = createExpensesByCategoryChart(
-      data.allExpenses
-    );
-    pdf.addImage(
-      expensesByCategoryChart,
-      "PNG",
-      margin,
-      startY,
-      chartWidth,
-      chartHeight
-    );
-    startY += chartHeight + 20;
-
-    // Check if need new page
-    if (startY > pdf.internal.pageSize.getHeight() - 120) {
-      pdf.addPage();
-      startY = 20;
-    }
-
-    // Trend Chart
-    const trendChart = createTrendChart(data.allIncome, data.allExpenses);
-    pdf.addImage(trendChart, "PNG", margin, startY, chartWidth, chartHeight);
-
-    return startY + chartHeight + 20;
   };
 
   const exportToPDF = async () => {
@@ -731,16 +887,8 @@ const ExportAnalytics = ({ user }) => {
       nextY = drawGoalsSection(pdf, nextY, data.goals);
 
       // Add Charts section
-      pdf.addPage();
-      nextY = 20;
-
-      // Add Charts title
-      pdf.setFont("times", "bold");
-      pdf.setTextColor(...COLORS.purple);
-      pdf.setFontSize(14);
-      pdf.text("Financial Analytics", margin, nextY);
-
-      nextY = drawCharts(pdf, nextY + 20, data);
+      nextY += 20; // Add some spacing after goals
+      nextY = await drawCharts(pdf, nextY, data);
 
       pdf.save(
         `moneyup-transactions-${new Date().toISOString().split("T")[0]}.pdf`
@@ -759,7 +907,7 @@ const ExportAnalytics = ({ user }) => {
       className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50"
     >
       <CloudArrowDownIcon className="w-5 h-5 mr-2" />
-      {exporting ? "Exporting PDF..." : "Export Transactions"}
+      {exporting ? "Exporting PDF..." : "Export Transactions as PDF"}
     </button>
   );
 };

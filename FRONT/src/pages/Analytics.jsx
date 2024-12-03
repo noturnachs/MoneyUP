@@ -21,16 +21,13 @@ import { Fragment } from "react";
 import ExportAnalytics from "../components/exports/ExportAnalytics";
 
 const CHART_COLORS = [
-  "#EF4444", // Red
-  "#3B82F6", // Blue
-  "#F59E0B", // Yellow
-  "#10B981", // Green
-  "#EC4899", // Pink
-  "#8B5CF6", // Purple
-  "#06B6D4", // Cyan
-  "#F97316", // Orange
-  "#14B8A6", // Teal
-  "#A855F7", // Violet
+  "#9333EA", // Entertainment
+  "#A855F7", // Food
+  "#B45BF8", // Healthcare
+  "#C084FC", // Housing
+  "#C688FD", // Other Expenses
+  "#D8B4FE", // Transportation
+  "#E9D5FF", // Utilities
 ];
 
 const Analytics = () => {
@@ -99,10 +96,17 @@ const Analytics = () => {
 
   const calculateSavings = () => {
     if (!basicData) return { netSavings: 0, savingsRate: 0 };
-    const netSavings = basicData.total_income - basicData.total_expenses;
+
+    const totalIncome = basicData.total_income || 0;
+    const totalExpenses = basicData.total_expenses || 0;
+    const netSavings = totalIncome - totalExpenses;
+
+    // Calculate savings rate only if there's income
+    const savingsRate = totalIncome > 0 ? (netSavings / totalIncome) * 100 : 0;
+
     return {
       netSavings,
-      savingsRate: basicData.savings_rate || 0,
+      savingsRate,
     };
   };
 
@@ -123,8 +127,40 @@ const Analytics = () => {
       );
     }
 
-    const mostChanged = basicData.insights[0]; // Biggest change
-    const unusualSpending = basicData.insights.filter((i) => i.is_unusual);
+    const totalIncome = basicData.total_income || 0;
+
+    // Only consider expenses that are significant relative to income
+    const significantInsights = basicData.insights
+      .filter((insight) => {
+        // Calculate what percentage of income this expense represents
+        const percentOfIncome = (insight.current_amount / totalIncome) * 100;
+
+        return (
+          // Expense is more than 50% of income
+          percentOfIncome > 50 ||
+          // OR expense has increased significantly (>50%) AND is at least 20% of income
+          (Math.abs(insight.percent_change) > 50 && percentOfIncome > 20)
+        );
+      })
+      .sort((a, b) => {
+        // Sort by percentage of income
+        const aPercent = (a.current_amount / totalIncome) * 100;
+        const bPercent = (b.current_amount / totalIncome) * 100;
+        return bPercent - aPercent;
+      });
+
+    if (!significantInsights.length) {
+      return (
+        <div className="text-gray-400 text-center py-4">
+          No significant spending detected relative to your income
+        </div>
+      );
+    }
+
+    const mostChanged = significantInsights[0]; // Biggest relative to income
+    const unusualSpending = significantInsights.filter(
+      (i) => (i.current_amount / totalIncome) * 100 > 50
+    );
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -135,9 +171,16 @@ const Analytics = () => {
               mostChanged.percent_change > 0 ? "text-red-500" : "text-green-500"
             }`}
           >
-            {mostChanged.category} spending{" "}
-            {mostChanged.percent_change > 0 ? "increased" : "decreased"} by{" "}
-            {Math.abs(mostChanged.percent_change).toFixed(1)}% from last month
+            {mostChanged.category} spending is{" "}
+            {((mostChanged.current_amount / totalIncome) * 100).toFixed(1)}% of
+            your income
+            {mostChanged.percent_change !== 0 && (
+              <span className="block mt-1 text-sm">
+                ({mostChanged.percent_change > 0 ? "increased" : "decreased"} by{" "}
+                {Math.abs(mostChanged.percent_change).toFixed(1)}% from last
+                month)
+              </span>
+            )}
           </p>
         </div>
 
@@ -145,10 +188,16 @@ const Analytics = () => {
           <h3 className="text-gray-400 text-sm mb-3">Category Analysis</h3>
           <p className="text-white">
             {unusualSpending.length > 0
-              ? `Unusual spending in ${unusualSpending
-                  .map((i) => i.category)
+              ? `High spending categories: ${unusualSpending
+                  .map(
+                    (i) =>
+                      `${i.category} (${(
+                        (i.current_amount / totalIncome) *
+                        100
+                      ).toFixed(1)}% of income)`
+                  )
                   .join(", ")}`
-              : "No unusual spending patterns detected"}
+              : "No categories exceed 50% of your income"}
           </p>
         </div>
 
@@ -156,24 +205,22 @@ const Analytics = () => {
           <h3 className="text-gray-400 text-sm mb-3">Unusual Spending</h3>
           {unusualSpending.length > 0 ? (
             <>
-              <p
-                className={`${
-                  unusualSpending[0].percent_change > 0
-                    ? "text-red-500"
-                    : "text-green-500"
-                }`}
-              >
+              <p className="text-red-500">
                 {unusualSpending[0].category} spending is{" "}
-                {Math.abs(unusualSpending[0].percent_change).toFixed(1)}%{" "}
-                {unusualSpending[0].percent_change > 0 ? "higher" : "lower"}{" "}
-                than last month
+                {(
+                  (unusualSpending[0].current_amount / totalIncome) *
+                  100
+                ).toFixed(1)}
+                % of your income
               </p>
               <p className="text-sm text-gray-400 mt-1">
                 Amount: {formatCurrency(unusualSpending[0].current_amount)}
               </p>
             </>
           ) : (
-            <p className="text-green-500">No unusual spending detected</p>
+            <p className="text-green-500">
+              All spending categories are below 50% of your income
+            </p>
           )}
         </div>
       </div>
@@ -213,9 +260,23 @@ const Analytics = () => {
           <Tooltip
             formatter={(value) => formatCurrency(value)}
             labelFormatter={(label) => `Period: ${label}`}
-            contentStyle={{ backgroundColor: "#1F2937", border: "none" }}
-            itemStyle={{ color: "#fff" }}
-            labelStyle={{ color: "#9CA3AF" }}
+            contentStyle={{
+              backgroundColor: "#ef4444",
+              border: "none",
+              padding: "4px 8px",
+              borderRadius: "0px",
+            }}
+            itemStyle={{
+              color: "#fff",
+              fontSize: "14px",
+              padding: "0",
+            }}
+            labelStyle={{
+              color: "#fff",
+              fontSize: "14px",
+              padding: "0",
+            }}
+            separator=": "
           />
           <Line
             type="monotone"
@@ -269,7 +330,7 @@ const Analytics = () => {
                   : "text-red-500"
               }`}
             >
-              {formatCurrency(Math.abs(calculateSavings().netSavings))}
+              {formatCurrency(calculateSavings().netSavings)}
             </p>
           </div>
           <div className="bg-gray-800 rounded-lg p-6">
@@ -311,7 +372,7 @@ const Analytics = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={advancedData?.monthly_trends || []}
-                  margin={{ top: 10, right: 30, left: 70, bottom: 30 }}
+                  margin={{ top: 10, right: 30, left: 20, bottom: 30 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                   <XAxis
@@ -321,6 +382,7 @@ const Analytics = () => {
                     angle={-45}
                     textAnchor="end"
                     height={60}
+                    interval={0}
                   />
                   <YAxis
                     stroke="#9CA3AF"
@@ -335,6 +397,10 @@ const Analytics = () => {
                     contentStyle={{
                       backgroundColor: "#1F2937",
                       border: "none",
+                      borderRadius: "8px",
+                      padding: "8px 12px",
+                      boxShadow:
+                        "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
                     }}
                     itemStyle={{ color: "#fff" }}
                     labelStyle={{ color: "#9CA3AF" }}
@@ -359,53 +425,74 @@ const Analytics = () => {
           </div>
 
           <div className="bg-gray-800 rounded-lg p-6 relative">
-            <h3 className="text-white text-lg font-semibold mb-4">
+            <h2 className="text-white text-xl font-semibold mb-6">
               Expenses by Category
-            </h3>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={advancedData?.category_breakdown || []}
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    dataKey="value"
-                    nameKey="name"
-                    minAngle={15}
-                  >
-                    {(advancedData?.category_breakdown || []).map(
-                      (entry, index) => (
+            </h2>
+            <div className="h-[400px]">
+              {!advancedData?.category_breakdown ||
+              advancedData.category_breakdown.length === 0 ? (
+                <div className="h-full flex items-center justify-center">
+                  <p className="text-gray-400 text-center">
+                    No expense data available yet. Start adding expenses to see
+                    your spending breakdown.
+                  </p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={advancedData.category_breakdown}
+                      innerRadius="60%"
+                      outerRadius="80%"
+                      paddingAngle={4}
+                      dataKey="value"
+                      nameKey="name"
+                      minAngle={15}
+                    >
+                      {advancedData.category_breakdown.map((entry, index) => (
                         <Cell
                           key={`cell-${index}`}
                           fill={CHART_COLORS[index % CHART_COLORS.length]}
                         />
-                      )
-                    )}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value) => formatCurrency(value)}
-                    contentStyle={{
-                      backgroundColor: "#1F2937",
-                      border: "none",
-                    }}
-                    itemStyle={{ color: "#fff" }}
-                    labelStyle={{ color: "#9CA3AF" }}
-                  />
-                  <Legend
-                    layout="vertical"
-                    align="right"
-                    verticalAlign="middle"
-                    iconType="circle"
-                    iconSize={8}
-                    formatter={(value) => (
-                      <span style={{ color: "#9CA3AF", fontSize: "12px" }}>
-                        {value}
-                      </span>
-                    )}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value) => formatCurrency(value)}
+                      contentStyle={{
+                        backgroundColor: "#ef4444",
+                        border: "none",
+                        padding: "4px 8px",
+                        borderRadius: "0px",
+                      }}
+                      itemStyle={{
+                        color: "#fff",
+                        fontSize: "14px",
+                        padding: "0",
+                      }}
+                      labelStyle={{
+                        color: "#fff",
+                        fontSize: "14px",
+                        padding: "0",
+                      }}
+                      separator=": "
+                    />
+                    <Legend
+                      layout="vertical"
+                      align="right"
+                      verticalAlign="middle"
+                      iconType="circle"
+                      iconSize={10}
+                      wrapperStyle={{
+                        paddingLeft: "20px",
+                        fontSize: "14px",
+                      }}
+                      formatter={(value) => (
+                        <span style={{ color: "#9CA3AF" }}>{value}</span>
+                      )}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </div>
             {!hasPro && <BlurredOverlay />}
           </div>

@@ -13,12 +13,13 @@ exports.getBasicAnalytics = async (req, res) => {
     } = await db.execute(
       `
       SELECT 
-        COALESCE(SUM(CASE WHEN i.date >= $1 THEN i.amount ELSE 0 END), 0) as total_income,
-        COALESCE(SUM(CASE WHEN e.date >= $1 THEN e.amount ELSE 0 END), 0) as total_expenses
-      FROM 
-        (SELECT $1::timestamp as start_date) d
-        LEFT JOIN income i ON i.user_id = $2
-        LEFT JOIN expenses e ON e.user_id = $2
+        (SELECT COALESCE(SUM(amount), 0) 
+         FROM income 
+         WHERE user_id = $2 AND date >= $1) as total_income,
+        (SELECT COALESCE(SUM(amount), 0) 
+         FROM expenses 
+         WHERE user_id = $2 AND date >= $1) as total_expenses
+      FROM (SELECT 1) as dummy
     `,
       [startOfMonth, req.user.id]
     );
@@ -97,25 +98,23 @@ exports.getAdvancedAnalytics = async (req, res) => {
     const { rows: monthlyTrends } = await db.execute(
       `
       WITH RECURSIVE months AS (
-        SELECT 
-          DATE_TRUNC('month', $1::timestamp) as month
+        SELECT DATE_TRUNC('month', $1::timestamp) as month
         UNION ALL
-        SELECT 
-          DATE_TRUNC('month', month + INTERVAL '1 month')
+        SELECT DATE_TRUNC('month', month + INTERVAL '1 month')
         FROM months
         WHERE month < DATE_TRUNC('month', $2::timestamp)
       )
       SELECT 
         TO_CHAR(m.month, 'Mon YYYY') as month,
-        COALESCE(SUM(i.amount), 0) as monthly_income,
-        COALESCE(SUM(e.amount), 0) as monthly_expenses
+        (SELECT COALESCE(SUM(amount), 0) 
+         FROM income 
+         WHERE user_id = $3 
+         AND DATE_TRUNC('month', date) = m.month) as monthly_income,
+        (SELECT COALESCE(SUM(amount), 0) 
+         FROM expenses 
+         WHERE user_id = $3 
+         AND DATE_TRUNC('month', date) = m.month) as monthly_expenses
       FROM months m
-      LEFT JOIN income i ON 
-        DATE_TRUNC('month', i.date) = m.month AND 
-        i.user_id = $3
-      LEFT JOIN expenses e ON 
-        DATE_TRUNC('month', e.date) = m.month AND 
-        e.user_id = $3
       GROUP BY m.month
       ORDER BY m.month ASC
     `,
