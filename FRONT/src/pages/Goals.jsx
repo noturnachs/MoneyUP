@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, Fragment } from "react";
-import { Dialog, Transition } from "@headlessui/react";
 import { useAuth } from "../context/AuthContext";
 import { Link } from "react-router-dom";
 import {
@@ -57,7 +56,7 @@ const Goals = () => {
   const [goalToDelete, setGoalToDelete] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isAccomplishing, setIsAccomplishing] = useState(false);
+  const [accomplishingGoalId, setAccomplishingGoalId] = useState(null);
 
   const hasPro =
     user?.subscription?.tier === "pro" ||
@@ -243,7 +242,7 @@ const Goals = () => {
     goalAmount,
     goalDescription
   ) => {
-    setIsAccomplishing(true);
+    setAccomplishingGoalId(goalId);
     try {
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/goals/${goalId}/accomplish`,
@@ -295,7 +294,7 @@ const Goals = () => {
       console.error("Error marking goal as accomplished:", error);
       alert("Failed to mark goal as accomplished");
     } finally {
-      setIsAccomplishing(false);
+      setAccomplishingGoalId(null);
     }
   };
 
@@ -439,9 +438,23 @@ const Goals = () => {
                             goal.description
                           )
                         }
-                        className="mt-2 w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        disabled={accomplishingGoalId === goal.goal_id}
+                        className="mt-2 w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                       >
-                        Mark as Accomplished
+                        {accomplishingGoalId === goal.goal_id ? (
+                          <>
+                            <l-ring
+                              size="15"
+                              stroke="2"
+                              bg-opacity="0"
+                              speed="2"
+                              color="white"
+                            />
+                            <span>Processing...</span>
+                          </>
+                        ) : (
+                          "Mark as Accomplished"
+                        )}
                       </button>
                     </div>
                   ) : null}
@@ -583,15 +596,21 @@ const Goals = () => {
                     <DatePicker
                       selected={
                         currentGoal.targetDate
-                          ? new Date(currentGoal.targetDate)
+                          ? new Date(currentGoal.targetDate + "T00:00:00")
                           : null
                       }
-                      onChange={(date) =>
+                      onChange={(date) => {
+                        const localDate = new Date(
+                          date.getTime() - date.getTimezoneOffset() * 60000
+                        )
+                          .toISOString()
+                          .split("T")[0];
+
                         setCurrentGoal({
                           ...currentGoal,
-                          targetDate: date.toISOString().split("T")[0],
-                        })
-                      }
+                          targetDate: localDate,
+                        });
+                      }}
                       dateFormat="yyyy-MM-dd"
                       minDate={new Date()}
                       className="pl-10 block w-full px-3 py-2 border border-gray-700 rounded-lg bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
