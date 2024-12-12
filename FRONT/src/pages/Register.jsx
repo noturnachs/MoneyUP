@@ -51,6 +51,8 @@ const Register = () => {
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [showPayPal, setShowPayPal] = useState(false);
   const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [emailAvailable, setEmailAvailable] = useState(null);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -59,12 +61,14 @@ const Register = () => {
       [name]: value,
     }));
 
-    // Only clear username-related errors when typing in username field
     if (name === "username") {
       setUsernameAvailable(null);
       setError("");
     }
-    // Clear password match error when typing in password fields
+    if (name === "email") {
+      setEmailAvailable(null);
+      setError("");
+    }
     if (name === "password" || name === "confirmPassword") {
       if (error === "Passwords do not match") {
         setError("");
@@ -106,6 +110,43 @@ const Register = () => {
       setUsernameAvailable(null);
     } finally {
       setIsCheckingUsername(false);
+    }
+  };
+
+  const checkEmailAvailability = async (email) => {
+    if (!email) {
+      setEmailAvailable(null);
+      return;
+    }
+
+    setIsCheckingEmail(true);
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/auth/check-availability`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            field: "email",
+            value: email,
+          }),
+        }
+      );
+
+      const data = await response.json();
+      setEmailAvailable(data.available);
+      if (!data.available) {
+        setError("This email already has an account");
+      } else {
+        setError("");
+      }
+    } catch (error) {
+      console.error("Error checking email:", error);
+      setEmailAvailable(null);
+    } finally {
+      setIsCheckingEmail(false);
     }
   };
 
@@ -218,13 +259,10 @@ const Register = () => {
 
   // Add this function to check if the form is valid
   const isFormValid = () => {
-    // Return false if there are any errors
     if (error) return false;
-    // Return false if username is taken or being checked
     if (!usernameAvailable || isCheckingUsername) return false;
-    // Return false if passwords don't match
+    if (!emailAvailable || isCheckingEmail) return false;
     if (formData.password !== formData.confirmPassword) return false;
-    // Return false if any required field is empty
     if (
       !formData.firstName ||
       !formData.lastName ||
@@ -336,16 +374,40 @@ const Register = () => {
               <label htmlFor="email" className="sr-only">
                 Email address
               </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-                className="appearance-none rounded-lg relative block w-full px-3 py-2 border border-gray-700 bg-gray-800 text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
-              />
+              <div className="relative">
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
+                  onBlur={(e) => checkEmailAvailability(e.target.value)}
+                  className={`appearance-none rounded-lg relative block w-full px-3 py-2 border 
+                    ${
+                      !emailAvailable && emailAvailable !== null
+                        ? "border-red-500"
+                        : "border-gray-700"
+                    } 
+                    ${emailAvailable ? "border-green-500" : ""}
+                    bg-gray-800 text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm`}
+                  placeholder="Email address"
+                />
+                {isCheckingEmail && (
+                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  </div>
+                )}
+                {!isCheckingEmail && emailAvailable !== null && (
+                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                    {emailAvailable ? (
+                      <span className="text-green-500">✓</span>
+                    ) : (
+                      <span className="text-red-500">✗</span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             <div>
               <label htmlFor="password" className="sr-only">
