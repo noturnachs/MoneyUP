@@ -271,7 +271,7 @@ const Goals = () => {
             body: JSON.stringify({
               amount: goalAmount,
               description: `Goal Accomplished: ${goalDescription}`,
-              category_id: 1, // Make sure to use appropriate category_id for goals
+              category_id: 11, // Make sure to use appropriate category_id for goals
               date: new Date().toISOString(),
             }),
           }
